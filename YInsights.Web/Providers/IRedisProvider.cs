@@ -2,8 +2,8 @@
 
 namespace YInsights.Web.Providers
 {
-    public interface IRedisService
+    public interface IRedisProvider:ICacheProvider
     {
-         IDatabase Database { get; set; }
+        
     }
 }

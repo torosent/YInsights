@@ -10,16 +10,16 @@ namespace YInsights.Web.Services
     public class TopicService
     {
         private readonly YInsightsContext db;    
-        private readonly RedisService redisdb;
+        private readonly RedisProvider redisdb;
 
-        public TopicService(YInsightsContext _db, RedisService _redisdb)
+        public TopicService(YInsightsContext _db, RedisProvider _redisdb)
         {
             db = _db;
             redisdb = _redisdb;
         }
         public async Task<IEnumerable<Topics>> GetTopics(int limit)
         {
-            var strTopics = await redisdb.Database.StringGetAsync("WordCloudTopics");
+            var strTopics = await redisdb.GetValue("WordCloudTopics");
             if (!string.IsNullOrEmpty(strTopics))
             {
                 var topics = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics).Take(limit);
@@ -30,7 +30,7 @@ namespace YInsights.Web.Services
 
         public async Task<IEnumerable<string>> SearchTopics(string text, int limit)
         {
-            var strTopics = await redisdb.Database.StringGetAsync("Topics");
+            var strTopics = await redisdb.GetValue("Topics");
             if (!string.IsNullOrEmpty(strTopics))
             {
                 var topics = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics);

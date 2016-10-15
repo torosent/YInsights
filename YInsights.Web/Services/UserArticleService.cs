@@ -14,8 +14,8 @@ namespace YInsights.Web.Services
     public class UserArticleService:IUserArticleService
     { 
         private readonly YInsightsContext db;
-        private readonly RedisService redisdb;
-        public UserArticleService(YInsightsContext _db,RedisService _redisdb)
+        private readonly RedisProvider redisdb;
+        public UserArticleService(YInsightsContext _db,RedisProvider _redisdb)
         {
             db = _db;
             redisdb = _redisdb;
@@ -39,8 +39,8 @@ namespace YInsights.Web.Services
                 foreach (var id in articlesIds)
                 {
 
-                    var val = await redisdb.Database.StringGetAsync(id);
-                    if (val.HasValue)
+                    var val = await redisdb.GetValue(id);
+                    if (!string.IsNullOrEmpty(val))
                     {
                         articlesList.Add(Newtonsoft.Json.JsonConvert.DeserializeObject<UserArticles>(val));
                     }
@@ -79,7 +79,7 @@ namespace YInsights.Web.Services
                                     tags = ((JArray)item.tags).Select(x => x.Value<string>()).ToList()
                                 };
                                 articlesList.Add(userArticle);
-                                await redisdb.Database.StringSetAsync(userArticle.articleid.ToString(), Newtonsoft.Json.JsonConvert.SerializeObject(userArticle));
+                                redisdb.SetValue(userArticle.articleid.ToString(), Newtonsoft.Json.JsonConvert.SerializeObject(userArticle));
                             }
                         }
                     }

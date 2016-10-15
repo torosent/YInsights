@@ -56,7 +56,7 @@ namespace YInsights
 
             services.AddEntityFrameworkSqlServer();
 
-            services.AddSingleton(typeof(RedisService),new RedisService(Configuration.GetConnectionString("RedisConnection")));
+            services.AddSingleton(typeof(RedisProvider),new RedisProvider(Configuration.GetConnectionString("RedisConnection")));
             services.AddTransient(typeof(UserArticleService));
             services.AddTransient(typeof(UserService));
             services.AddTransient(typeof(TopicService));
