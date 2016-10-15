@@ -1,0 +1,84 @@
+﻿@model YInsights.Web.Model.User
+
+<br />
+<form asp-controller="Account" asp-action="Profile" method="post" class="form-horizontal">
+	<h3>My Profile</h3>
+	<fieldset class="well">
+		@{
+			if (!string.IsNullOrEmpty(ViewBag.success))
+			{
+				<div class="alert alert-dismissible alert-success">
+					<button type="button" class="close" data-dismiss="alert">&times;</button>
+					Profile saved successfully.
+				</div>}
+		}
+		<div class="form-group">
+			<label for="id" class="col-lg-2 control-label">Username</label>
+			<div class="col-lg-10">
+				<input type="text" asp-for="Id" class="form-control" id="inputUsername" disabled="">
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="hn" class="col-lg-2 control-label">HN Username</label>
+			<div class="col-lg-10">
+				<input type="text" asp-for="hn" class="form-control" id="inputHN">
+			</div>
+		</div>
+
+		<div class="form-group">
+				<label for="topics" class="col-lg-2 control-label">Topics</label>
+				<div class="col-lg-10">
+					<ul id="topics" asp-for="tags">
+						@{
+							if (this.Model.tags != null)
+							{
+								foreach (var tag in this.Model.tags)
+								{
+									<li>@tag</li>
+								}
+							}
+						}
+					</ul>
+				</div>
+		</div>
+		<div class="form-group">
+			<div class="col-md-offset-2 col-md-10">
+				<button type="submit" class="btn btn-primary">Save</button>
+			</div>
+		</div>
+	</fieldset>
+</form>
+
+
+
+@section Scripts {
+	<script type="text/javascript">
+		$(document).ready(function () {
+			$("#topics").tagit({
+				autocomplete: {
+					source: function (request, response) {
+						$.ajax({
+							url: "/Account/SearchTopics",  
+							data: {
+								text: request.term
+							},
+							success: function (data) {
+								response($.map(data, function (item) {
+									return {
+										label: item,
+										value: item
+									}
+								}));
+							}
+						});
+					},
+					minLength: 3
+				}
+			});
+		});
+	</script>
+}
+
+
+
+
