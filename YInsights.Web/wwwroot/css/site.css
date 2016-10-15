@@ -155,7 +155,6 @@ ul.tagit input[type="text"] {
     overflow-x: auto;
     overflow-y: visible;
     position: relative;
-    margin-top: 20px;
     margin-bottom: 20px;
   }
   .canvas {

@@ -22,8 +22,54 @@
 </div>
 <div class="row">
     <div class="col-lg-1"></div>
-    <div class="col-lg-10" id="canvas-container">
+    <div class="col-lg-7" id="canvas-container">
         <canvas id="canvas" class="canvas"></canvas>
+    </div>
+    <div class="col-lg-3">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title">Last Topics Added</h3>
+            </div>
+            <div class="panel-body">
+                <ul class="list-group">
+                    @{
+                        if (ViewBag.LastTopics != null)
+                        {
+                            foreach (var item in (List<YInsights.Web.Model.Topics>)ViewBag.LastTopics)
+                            {
+                               <li class="list-group-item">
+                                   @item.topic.ToString()
+                               </li>
+                            }
+
+                        }
+                    }
+                  
+                </ul>
+            </div>
+        </div>
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title">Trending Topics</h3>
+            </div>
+            <div class="panel-body">
+                <ul class="list-group">
+                    @{
+                        if (ViewBag.LastTopics != null)
+                        {
+                            foreach (var item in (List<YInsights.Web.Model.Topics>)ViewBag.TrendingTopics)
+                            {
+                                <li class="list-group-item">
+                                    <span class="badge">@item.count</span>
+                                    @item.topic.ToString()
+                                </li>
+                            }
+
+                        }
+                    }
+                </ul>
+            </div>
+        </div>
     </div>
     <div class="col-lg-1"></div>
 </div>
@@ -33,7 +79,7 @@
 
 
             $.ajax({
-                url: "/Home/WordCloud",
+                url: "/Report/WordCloud",
                 success: success
             });
 
@@ -51,7 +97,7 @@
                 var $canvas = $('#canvas');
                 // Set the width and height
                 var width = $('#canvas-container').width();
-                var height =  Math.floor(width * 0.65);
+                var height = Math.floor(width * 0.65);
                 var pixelWidth = width;
                 var pixelHeight = height;
 
@@ -74,7 +120,7 @@
                     color: '#2c3e50',
                     gridSize: Math.round(16 * $canvas.width() / 1024),
                     hover: window.drawBox,
-                    click: function (item) {  
+                    click: function (item) {
                     },
                     backgroundColor: '#ecf0f1'
                 });

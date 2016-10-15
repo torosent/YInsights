@@ -35,6 +35,8 @@
     <ProjectReference Include="..\DocumentDbMiddlewareWebApi\DocumentDbMiddlewareWebApi.csproj" />
     <ProjectReference Include="..\GetArticles\GetArticles.csproj" />
     <ProjectReference Include="..\GetArticle\GetArticle.csproj" />
+    <ProjectReference Include="..\LastTopics\LastTopics.csproj" />
+    <ProjectReference Include="..\TrendingTopics\TrendingTopics.csproj" />
     <ProjectReference Include="..\UserArticlesGenerator\UserArticlesGenerator.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />

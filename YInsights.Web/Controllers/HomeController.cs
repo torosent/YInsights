@@ -10,25 +10,25 @@ namespace YInsights.Web.Controllers
 {
     public class HomeController : Controller
     {
-     
 
-        
+
+
         private UserService userService;
         private TopicService topicService;
         private AIService aiService;
-        public HomeController(UserService _userService,TopicService _topicService,AIService _aiService)
+        public HomeController(UserService _userService, TopicService _topicService, AIService _aiService)
         {
             userService = _userService;
             topicService = _topicService;
             aiService = _aiService;
         }
         [Authorize]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             try
             {
                 string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
-                var user = userService.FindUserByUsername(username);     
+                var user = userService.FindUserByUsername(username);
                 aiService.TrackUser("Homepage", username);
                 if (user == null || string.IsNullOrEmpty(user.topics))
                 {
@@ -37,10 +37,13 @@ namespace YInsights.Web.Controllers
                 else
                 {
                     ViewBag.user = user.Id;
-                   
+
                 }
 
-            ViewBag.title = "Home";
+                ViewBag.title = "Home";
+                ViewBag.LastTopics = await topicService.GetLastTopics();
+                ViewBag.TrendingTopics = await topicService.GetTrendingTopics();
+
             }
             catch (Exception ex)
             {
@@ -49,28 +52,14 @@ namespace YInsights.Web.Controllers
             return View();
         }
 
-        [Authorize]
-        public async Task<IActionResult> WordCloud()
-        {
-            try
-            {
-                var topicsList = await topicService.GetTopics(200);
-                return Json(topicsList);
-            }
-            catch(Exception ex)
-            {
-                aiService.TrackException(ex);
-            }
-            return null;
-        }
 
-        
+
 
         public IActionResult Error()
         {
             return View();
         }
 
-       
+
     }
 }

@@ -27,7 +27,26 @@ namespace YInsights.Web.Services
             }
             return new List<Topics>();
         }
-
+        public async Task<IEnumerable<Topics>> GetLastTopics()
+        {
+            var strTopics = await redisdb.GetValue("LastTopics");
+            if (!string.IsNullOrEmpty(strTopics))
+            {
+                var topics = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics);
+                return topics;
+            }
+            return new List<Topics>();
+        }
+        public async Task<IEnumerable<Topics>> GetTrendingTopics()
+        {
+            var strTopics = await redisdb.GetValue("TrendingTopics");
+            if (!string.IsNullOrEmpty(strTopics))
+            {
+                var topics = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics);
+                return topics;
+            }
+            return new List<Topics>();
+        }
         public async Task<IEnumerable<string>> SearchTopics(string text, int limit)
         {
             var strTopics = await redisdb.GetValue("Topics");

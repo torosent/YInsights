@@ -6,25 +6,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
-using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure;
-using YInsights.Shared.Poco;
 using YInsights.Shared.AI;
 using StackExchange.Redis;
+using Microsoft.Azure.Documents.Client;
+using YInsights.Shared.Poco;
+using YInsights.Shared.Extentions;
 using YInsights.Shared.Common;
 
-namespace CalculateTopicsAndTags
+namespace TrendingTopics
 {
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class CalculateTopicsAndTags : StatelessService
+    internal sealed class TrendingTopics : StatelessService
     {
         string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
         string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
         string RedisConnection = CloudConfigurationManager.GetSetting("RedisConnection");
         IDatabase Database;
-        public CalculateTopicsAndTags(StatelessServiceContext context)
+
+        public TrendingTopics(StatelessServiceContext context)
             : base(context)
         { }
 
@@ -43,7 +45,6 @@ namespace CalculateTopicsAndTags
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-
             ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(RedisConnection);
             Database = redis.GetDatabase();
 
@@ -52,7 +53,7 @@ namespace CalculateTopicsAndTags
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    CalculateTopics();
+                    CalculateTrendingTopics();
                     var minutes = 15;
                     await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
                 }
@@ -65,7 +66,7 @@ namespace CalculateTopicsAndTags
             }
         }
 
-        private async void CalculateTopics()
+        private async void CalculateTrendingTopics()
         {
             var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
             {
@@ -73,32 +74,34 @@ namespace CalculateTopicsAndTags
                 ConnectionProtocol = Protocol.Tcp
             });
 
+
+            var currentDate = DateTime.Now.AddDays(-7).DateTimeToUnixTimestamp();
+
             await docclient.OpenAsync();
             var articleExistQuery = docclient.CreateDocumentQuery<Article>(
-                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true);
+                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true && f.time > currentDate);
 
 
             var tags = new Dictionary<string, int>();
             foreach (var article in articleExistQuery)
             {
-                Tags.CalculateTags(tags, article);
+                Tags.CalculateTags(tags, article,false);
             }
 
             try
             {
-               var listTags =tags.OrderByDescending(x => x.Value);
+                var listTags = tags.OrderByDescending(x => x.Value);
 
                 var list = new List<dynamic>();
                 foreach (var tag in listTags)
                 {
                     list.Add(new { topic = tag.Key, count = tag.Value });
                 }
-              
-                await Database.StringSetAsync("Topics", Newtonsoft.Json.JsonConvert.SerializeObject(list));
-                await Database.StringSetAsync("WordCloudTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)));
 
-                ServiceEventSource.Current.ServiceMessage(this, $"Commited {tags.Count} Topics");
-                ApplicationInsightsClient.LogEvent($"Commited Topics", tags.Count.ToString());     
+                await Database.StringSetAsync("TrendingTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
+
+                ServiceEventSource.Current.ServiceMessage(this, $"Commited Trending {tags.Count} Topics");
+                ApplicationInsightsClient.LogEvent($"Commited Trending Topics", tags.Count.ToString());
             }
             catch (Exception ex)
             {
@@ -109,6 +112,9 @@ namespace CalculateTopicsAndTags
             }
 
         }
-
     }
+
+       
 }
+    
+
