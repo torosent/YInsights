@@ -109,7 +109,7 @@
     <Compile Include="AI\ServiceFabricEnvironmentContextReader.cs" />
     <Compile Include="AI\ServiceFabricTelemetryInitializer.cs" />
     <Compile Include="Common\Tags.cs" />
-    <Compile Include="Extentions\DateTimeExtentions.cs" />
+    <Compile Include="Extentions\ConvertExtentions.cs" />
     <Compile Include="Poco\Article.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

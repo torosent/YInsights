@@ -50,19 +50,12 @@ namespace LastTopics
 
             while (true)
             {
-                try
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    CalculateLastTopics();
-                    var minutes = 15;
-                    await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    ApplicationInsightsClient.LogException(ex);
-                    ServiceEventSource.Current.ServiceMessage(this, ex.Message);
 
-                }
+                cancellationToken.ThrowIfCancellationRequested();
+                CalculateLastTopics();
+                var minutes = 15;
+                await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
+
             }
         }
 
@@ -77,13 +70,13 @@ namespace LastTopics
 
             await docclient.OpenAsync();
             var articleExistQuery = docclient.CreateDocumentQuery<Article>(
-                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x=>x.time).Take(10);
+                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x => x.time).Take(10);
 
 
             var tags = new Dictionary<string, int>();
             foreach (var article in articleExistQuery)
             {
-                Tags.CalculateTags(tags, article,false);
+                Tags.CalculateTags(tags, article, false);
             }
 
             try

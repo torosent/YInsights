@@ -50,19 +50,12 @@ namespace TrendingTopics
 
             while (true)
             {
-                try
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    CalculateTrendingTopics();
-                    var minutes = 15;
-                    await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    ApplicationInsightsClient.LogException(ex);
-                    ServiceEventSource.Current.ServiceMessage(this, ex.Message);
 
-                }
+                cancellationToken.ThrowIfCancellationRequested();
+                CalculateTrendingTopics();
+                var minutes = 15;
+                await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
+
             }
         }
 
@@ -75,7 +68,7 @@ namespace TrendingTopics
             });
 
 
-            var currentDate = DateTime.Now.AddDays(-7).DateTimeToUnixTimestamp();
+            var currentDate = DateTime.Now.AddDays(-2).DateTimeToUnixTimestamp();
 
             await docclient.OpenAsync();
             var articleExistQuery = docclient.CreateDocumentQuery<Article>(
@@ -85,7 +78,7 @@ namespace TrendingTopics
             var tags = new Dictionary<string, int>();
             foreach (var article in articleExistQuery)
             {
-                Tags.CalculateTags(tags, article,false);
+                Tags.CalculateTags(tags, article, false);
             }
 
             try
@@ -114,7 +107,7 @@ namespace TrendingTopics
         }
     }
 
-       
+
 }
-    
+
 

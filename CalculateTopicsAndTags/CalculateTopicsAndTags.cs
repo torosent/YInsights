@@ -49,19 +49,12 @@ namespace CalculateTopicsAndTags
 
             while (true)
             {
-                try
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    CalculateTopics();
-                    var minutes = 15;
-                    await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
-                }
-                catch (Exception ex)
-                {
-                    ApplicationInsightsClient.LogException(ex);
-                    ServiceEventSource.Current.ServiceMessage(this, ex.Message);
 
-                }
+                cancellationToken.ThrowIfCancellationRequested();
+                CalculateTopics();
+                var minutes = 15;
+                await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
+
             }
         }
 
@@ -86,19 +79,19 @@ namespace CalculateTopicsAndTags
 
             try
             {
-               var listTags =tags.OrderByDescending(x => x.Value);
+                var listTags = tags.OrderByDescending(x => x.Value);
 
                 var list = new List<dynamic>();
                 foreach (var tag in listTags)
                 {
                     list.Add(new { topic = tag.Key, count = tag.Value });
                 }
-              
+
                 await Database.StringSetAsync("Topics", Newtonsoft.Json.JsonConvert.SerializeObject(list));
                 await Database.StringSetAsync("WordCloudTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)));
 
                 ServiceEventSource.Current.ServiceMessage(this, $"Commited {tags.Count} Topics");
-                ApplicationInsightsClient.LogEvent($"Commited Topics", tags.Count.ToString());     
+                ApplicationInsightsClient.LogEvent($"Commited Topics", tags.Count.ToString());
             }
             catch (Exception ex)
             {
