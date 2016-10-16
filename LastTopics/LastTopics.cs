@@ -77,6 +77,8 @@ namespace LastTopics
                 foreach (var article in articleExistQuery)
                 {
                     var random = new Random((int)DateTime.Now.Ticks);
+                    if (tags.Count == 0)
+                        continue;
                     var tag = article.tags[random.Next(0, article.tags.Count)];
                     if (tags.ContainsKey(tag))
                         continue;
