@@ -21,15 +21,15 @@ namespace TrendingTopics
     /// </summary>
     internal sealed class TrendingTopics : StatelessService
     {
-        string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
-        string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
-        string RedisConnection = CloudConfigurationManager.GetSetting("RedisConnection");
-        ICacheProvider cache;
 
-        public TrendingTopics(StatelessServiceContext context, ICacheProvider cache)
+        private ICacheProvider cache;
+        private DocumentDBProvider documentDBProvider;
+
+        public TrendingTopics(StatelessServiceContext context, ICacheProvider cache, DocumentDBProvider documentDBProvider)
             : base(context)
         {
             this.cache = cache;
+            this.documentDBProvider = documentDBProvider;
         }
         /// <summary>
         /// Optional override to create listeners (e.g., TCP, HTTP) for this service replica to handle client or user requests.
@@ -58,21 +58,16 @@ namespace TrendingTopics
             }
         }
 
-        private async void CalculateTrendingTopics()
+        private  void CalculateTrendingTopics()
         {
             try
             {
-                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-                {
-                    ConnectionMode = ConnectionMode.Direct,
-                    ConnectionProtocol = Protocol.Tcp
-                });
-
+              
 
                 var currentDate = DateTime.Now.AddDays(-2).DateTimeToUnixTimestamp();
 
-                await docclient.OpenAsync();
-                var articleExistQuery = docclient.CreateDocumentQuery<Article>(
+          
+                var articleExistQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
                     UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true && f.time > currentDate);
 
 
