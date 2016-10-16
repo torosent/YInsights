@@ -21,11 +21,13 @@ namespace YInsights.Shared.Common
                 if (tags.ContainsKey(tag))
                 {
                     tags[tag]++;
+                   
                 }
                 else
                 {
                     tags.Add(tag, 1);
                 }
+               
             }
             if (includeTags)
                 foreach (var topic in article.topics)

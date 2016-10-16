@@ -61,26 +61,31 @@ namespace LastTopics
 
         private async void CalculateLastTopics()
         {
-            var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                ConnectionProtocol = Protocol.Tcp
-            });
-
-
-            await docclient.OpenAsync();
-            var articleExistQuery = docclient.CreateDocumentQuery<Article>(
-                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x => x.time).Take(10);
-
-
-            var tags = new Dictionary<string, int>();
-            foreach (var article in articleExistQuery)
-            {
-                Tags.CalculateTags(tags, article, false);
-            }
-
             try
             {
+                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
+                {
+                    ConnectionMode = ConnectionMode.Direct,
+                    ConnectionProtocol = Protocol.Tcp
+                });
+
+
+                await docclient.OpenAsync();
+                var articleExistQuery = docclient.CreateDocumentQuery<Article>(
+                    UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x => x.time).Take(10);
+
+
+                var tags = new Dictionary<string, int>();
+                
+                foreach (var article in articleExistQuery)
+                {
+                    var random = new Random((int)DateTime.Now.Ticks);
+                    var tag = article.tags[random.Next(0, article.tags.Count)];
+                    tags.Add(tag, 1);
+                   
+                }
+
+
                 var listTags = tags.OrderByDescending(x => x.Value);
 
                 var list = new List<dynamic>();

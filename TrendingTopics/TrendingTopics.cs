@@ -61,28 +61,29 @@ namespace TrendingTopics
 
         private async void CalculateTrendingTopics()
         {
-            var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                ConnectionProtocol = Protocol.Tcp
-            });
-
-
-            var currentDate = DateTime.Now.AddDays(-2).DateTimeToUnixTimestamp();
-
-            await docclient.OpenAsync();
-            var articleExistQuery = docclient.CreateDocumentQuery<Article>(
-                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true && f.time > currentDate);
-
-
-            var tags = new Dictionary<string, int>();
-            foreach (var article in articleExistQuery)
-            {
-                Tags.CalculateTags(tags, article, false);
-            }
-
             try
             {
+                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
+                {
+                    ConnectionMode = ConnectionMode.Direct,
+                    ConnectionProtocol = Protocol.Tcp
+                });
+
+
+                var currentDate = DateTime.Now.AddDays(-2).DateTimeToUnixTimestamp();
+
+                await docclient.OpenAsync();
+                var articleExistQuery = docclient.CreateDocumentQuery<Article>(
+                    UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true && f.time > currentDate);
+
+
+                var tags = new Dictionary<string, int>();
+                foreach (var article in articleExistQuery)
+                {
+                    Tags.CalculateTags(tags, article, false);
+                }
+
+
                 var listTags = tags.OrderByDescending(x => x.Value);
 
                 var list = new List<dynamic>();

@@ -60,25 +60,26 @@ namespace CalculateTopicsAndTags
 
         private async void CalculateTopics()
         {
-            var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                ConnectionProtocol = Protocol.Tcp
-            });
-
-            await docclient.OpenAsync();
-            var articleExistQuery = docclient.CreateDocumentQuery<Article>(
-                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true);
-
-
-            var tags = new Dictionary<string, int>();
-            foreach (var article in articleExistQuery)
-            {
-                Tags.CalculateTags(tags, article);
-            }
-
             try
             {
+                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
+                {
+                    ConnectionMode = ConnectionMode.Direct,
+                    ConnectionProtocol = Protocol.Tcp
+                });
+
+                await docclient.OpenAsync();
+                var articleExistQuery = docclient.CreateDocumentQuery<Article>(
+                    UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true);
+
+
+                var tags = new Dictionary<string, int>();
+                foreach (var article in articleExistQuery)
+                {
+                    Tags.CalculateTags(tags, article);
+                }
+
+
                 var listTags = tags.OrderByDescending(x => x.Value);
 
                 var list = new List<dynamic>();
