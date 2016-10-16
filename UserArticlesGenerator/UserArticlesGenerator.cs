@@ -14,6 +14,7 @@ using YInsights.Shared;
 using System.Text;
 using YInsights.Shared.Poco;
 using YInsights.Shared.AI;
+using YInsights.Shared.Providers;
 
 namespace UserArticlesGenerator
 {
@@ -22,13 +23,15 @@ namespace UserArticlesGenerator
     /// </summary>
     internal sealed class UserArticlesGenerator : StatefulService
     {
-        string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
-        string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
+       
         string SqlConnection = CloudConfigurationManager.GetSetting("SqlConnection");
+        private DocumentDBProvider documentDBProvider;
 
-        public UserArticlesGenerator(StatefulServiceContext context)
-            : base(context)
-        { }
+        
+        public UserArticlesGenerator(StatefulServiceContext context, DocumentDBProvider documentDBProvider) : base(context)
+        {
+            this.documentDBProvider = documentDBProvider;
+        }
 
         /// <summary>
         /// Optional override to create listeners (e.g., HTTP, Service Remoting, WCF, etc.) for this service replica to handle client or user requests.
@@ -66,35 +69,7 @@ namespace UserArticlesGenerator
             }
         }
 
-        //private async void Update()
-        //{
-        //    var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-        //    {
-        //        ConnectionMode = ConnectionMode.Direct,
-        //        ConnectionProtocol = Protocol.Tcp
-        //    });
-
-        //    await docclient.OpenAsync();
-
-        //    var articleExistQuery = docclient.CreateDocumentQuery<Article>(
-        //       UriFactory.CreateDocumentCollectionUri("articles", "article"));
-
-
-
-        //    foreach (var item in articleExistQuery)
-        //    {
-        //        var item1 = item;
-
-        //        if (item.lctags == null && item.tags != null)
-        //        {
-        //            item1.lctags = new List<string>();
-
-        //            item1.lctags.AddRange(item1.tags.Select(x => x.ToLower()));
-        //            item1.lctags.AddRange(item1.topics.Select(x => x.ToLower()));
-        //            var upsertResult = await docclient.UpsertDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), item1);
-        //        }
-        //    }
-        //}
+       
         private async void GetUsersAndTopics()
         {
             using (var sqlConnection =
@@ -176,13 +151,7 @@ namespace UserArticlesGenerator
         {
             try
             {
-                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-                {
-                    ConnectionMode = ConnectionMode.Direct,
-                    ConnectionProtocol = Protocol.Tcp
-                });
-
-                await docclient.OpenAsync();
+             
                 int topicIdx = 1;
                 var queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
 
@@ -227,7 +196,7 @@ namespace UserArticlesGenerator
                 var queryString = queryBuilder.ToString();
                 var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
 
-                var articleQuery = docclient.CreateDocumentQuery<Article>(
+                var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
                     UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
                 InsertNewArticles(id, articleQuery.ToList());
             }

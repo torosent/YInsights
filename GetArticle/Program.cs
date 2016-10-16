@@ -4,6 +4,7 @@ using System.Fabric;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
+using YInsights.Shared.Providers;
 
 namespace GetArticle
 {
@@ -22,7 +23,7 @@ namespace GetArticle
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("GetArticleType",
-                    context => new GetArticle(context)).GetAwaiter().GetResult();
+                    context => new GetArticle(context, new DocumentDBProvider())).GetAwaiter().GetResult();
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(GetArticle).Name);
 
 

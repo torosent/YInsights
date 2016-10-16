@@ -14,6 +14,7 @@ using Newtonsoft.Json.Linq;
 using Microsoft.Azure;
 using YInsights.Shared.Poco;
 using YInsights.Shared.AI;
+using YInsights.Shared.Providers;
 
 namespace CalaisTopicAndTags
 {
@@ -23,13 +24,17 @@ namespace CalaisTopicAndTags
     internal sealed class CalaisTopicAndTags : StatefulService
     {
         private const string URL = "https://api.thomsonreuters.com/permid/calais";
-        string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
-        string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
+      
         string apitoken = CloudConfigurationManager.GetSetting("ApiToken");
+        IDocumentDBProvider documentDB;
+        ICacheProvider cache;
 
-        public CalaisTopicAndTags(StatefulServiceContext context)
+        public CalaisTopicAndTags(StatefulServiceContext context, ICacheProvider cache, IDocumentDBProvider documentDB)
             : base(context)
-        { }
+        {
+            this.documentDB = documentDB;
+            this.cache = cache;
+        }
 
         /// <summary>
         /// Optional override to create listeners (e.g., HTTP, Service Remoting, WCF, etc.) for this service replica to handle client or user requests.
@@ -75,14 +80,8 @@ namespace CalaisTopicAndTags
 
         private async void GetPreProcessedArticles()
         {
-            var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                ConnectionProtocol = Protocol.Tcp
-            });
-
-            await docclient.OpenAsync();
-            var articleExistQuery = docclient.CreateDocumentQuery<Article>(
+           
+            var articleExistQuery = documentDB.Client.CreateDocumentQuery<Article>(
                 UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == false).Take(5);
 
 
@@ -112,14 +111,7 @@ namespace CalaisTopicAndTags
         {
             try
             {
-                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-                {
-                    ConnectionMode = ConnectionMode.Direct,
-                    ConnectionProtocol = Protocol.Tcp
-                });
-
-                await docclient.OpenAsync();
-
+            
                 var articlesDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, Article>>("articlesDictionary");
                 var articlesQueue = await this.StateManager.GetOrAddAsync<IReliableQueue<string>>("articlesQueue");
 
@@ -139,7 +131,9 @@ namespace CalaisTopicAndTags
                                     if (result)
                                     {
                                         article.Value.processed = true;
-                                        var upsertResult = await docclient.UpsertDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), article.Value);
+                                        var upsertResult = await documentDB.Client.UpsertDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), article.Value);
+                                        cache.SetValue(article.Value.Id, Newtonsoft.Json.JsonConvert.SerializeObject(article.Value));
+
                                         ServiceEventSource.Current.ServiceMessage(this, $"Updated article {article.Value.Id}");
                                         ApplicationInsightsClient.LogEvent($"Updated article",article.Value.Id);
 

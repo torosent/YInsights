@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
 using YInsights.Shared.AI;
+using YInsights.Shared.Providers;
 
 namespace CalaisTopicAndTags
 {
@@ -22,7 +23,7 @@ namespace CalaisTopicAndTags
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("CalaisTopicAndTagsType",
-                    context => new CalaisTopicAndTags(context)).GetAwaiter().GetResult();
+                    context => new CalaisTopicAndTags(context, new RedisProvider(), new DocumentDBProvider())).GetAwaiter().GetResult();
 
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(CalaisTopicAndTags).Name);
 

@@ -17,6 +17,7 @@ using Microsoft.Azure.Documents.Client;
 using YInsights.Shared;
 using YInsights.Shared.Poco;
 using YInsights.Shared.AI;
+using YInsights.Shared.Providers;
 
 namespace GetArticle
 {
@@ -25,9 +26,13 @@ namespace GetArticle
     /// </summary>
     internal sealed class GetArticle : StatelessService
     {
-        public GetArticle(StatelessServiceContext context)
+
+        internal IDocumentDBProvider documentDB;
+        public GetArticle(StatelessServiceContext context,  IDocumentDBProvider documentDB)
             : base(context)
-        { }
+        {   
+            this.documentDB = documentDB;
+        }
 
         /// <summary>
         /// Optional override to create listeners (e.g., TCP, HTTP) for this service replica to handle client or user requests.
@@ -55,10 +60,9 @@ namespace GetArticle
     }
     internal sealed class Handler : AutoCompleteServiceBusMessageReceiver
     {
-        string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
-        string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
-        StatelessService _service;
-        public Handler(StatelessService service)
+
+        GetArticle _service;
+        public Handler(GetArticle service)
         {
             _service = service;
 
@@ -76,13 +80,13 @@ namespace GetArticle
             try
             {
               
-                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey);
+               
 
                 var queryOptions = new FeedOptions { MaxItemCount = -1 };
 
               
 
-                IQueryable<Article> articleExistQuery = docclient.CreateDocumentQuery<Article>(
+                IQueryable<Article> articleExistQuery = _service.documentDB.Client.CreateDocumentQuery<Article>(
                     UriFactory.CreateDocumentCollectionUri("articles", "article"), queryOptions)
                     .Where(f => f.Id == storyId);
 
@@ -121,7 +125,7 @@ namespace GetArticle
         private async void InsertStory(dynamic story)
         {
 
-            var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey);
+          
             var article = new Article()
             {
                 Id = story.id.ToString(),
@@ -130,7 +134,7 @@ namespace GetArticle
                 title = story.title.ToString(),
                 url = story.url.ToString()
             };
-            await docclient.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), article);
+            await _service.documentDB.Client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), article);
             ServiceEventSource.Current.ServiceMessage(_service.Context, $"Inserted {article.Id}");     
         }
     }

@@ -8,11 +8,11 @@ using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using Microsoft.Azure;
 using YInsights.Shared.AI;
-using StackExchange.Redis;
 using Microsoft.Azure.Documents.Client;
 using YInsights.Shared.Poco;
 using YInsights.Shared.Extentions;
 using YInsights.Shared.Common;
+using YInsights.Shared.Providers;
 
 namespace TrendingTopics
 {
@@ -24,12 +24,13 @@ namespace TrendingTopics
         string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
         string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
         string RedisConnection = CloudConfigurationManager.GetSetting("RedisConnection");
-        IDatabase Database;
+        ICacheProvider cache;
 
-        public TrendingTopics(StatelessServiceContext context)
+        public TrendingTopics(StatelessServiceContext context, ICacheProvider cache)
             : base(context)
-        { }
-
+        {
+            this.cache = cache;
+        }
         /// <summary>
         /// Optional override to create listeners (e.g., TCP, HTTP) for this service replica to handle client or user requests.
         /// </summary>
@@ -45,9 +46,7 @@ namespace TrendingTopics
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(RedisConnection);
-            Database = redis.GetDatabase();
-
+           
             while (true)
             {
 
@@ -92,7 +91,7 @@ namespace TrendingTopics
                     list.Add(new { topic = tag.Key, count = tag.Value });
                 }
 
-                await Database.StringSetAsync("TrendingTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
+                cache.SetValue("TrendingTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
 
                 ServiceEventSource.Current.ServiceMessage(this, $"Commited Trending {tags.Count} Topics");
                 ApplicationInsightsClient.LogEvent($"Commited Trending Topics", tags.Count.ToString());

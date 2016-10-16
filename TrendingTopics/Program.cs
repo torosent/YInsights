@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
 using YInsights.Shared.AI;
+using YInsights.Shared.Providers;
 
 namespace TrendingTopics
 {
@@ -23,7 +24,7 @@ namespace TrendingTopics
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("TrendingTopicsType",
-                    context => new TrendingTopics(context)).GetAwaiter().GetResult();
+                    context => new TrendingTopics(context, new RedisProvider())).GetAwaiter().GetResult();
 
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(TrendingTopics).Name);
 

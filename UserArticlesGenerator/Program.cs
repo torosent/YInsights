@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
+using YInsights.Shared.Providers;
 
 namespace UserArticlesGenerator
 {
@@ -21,7 +22,7 @@ namespace UserArticlesGenerator
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("UserArticlesGeneratorType",
-                    context => new UserArticlesGenerator(context)).GetAwaiter().GetResult();
+                    context => new UserArticlesGenerator(context, new DocumentDBProvider())).GetAwaiter().GetResult();
 
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(UserArticlesGenerator).Name);
 

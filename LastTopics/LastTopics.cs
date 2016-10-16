@@ -7,12 +7,10 @@ using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using YInsights.Shared.AI;
-using StackExchange.Redis;
 using Microsoft.Azure.Documents.Client;
-using YInsights.Shared.Extentions;
 using YInsights.Shared.Poco;
-using YInsights.Shared.Common;
 using Microsoft.Azure;
+using YInsights.Shared.Providers;
 
 namespace LastTopics
 {
@@ -23,12 +21,13 @@ namespace LastTopics
     {
         string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
         string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
-        string RedisConnection = CloudConfigurationManager.GetSetting("RedisConnection");
-        IDatabase Database;
+        ICacheProvider cache;
 
-        public LastTopics(StatelessServiceContext context)
+        public LastTopics(StatelessServiceContext context,ICacheProvider cache)
             : base(context)
-        { }
+        {
+            this.cache = cache;
+        }
 
         /// <summary>
         /// Optional override to create listeners (e.g., TCP, HTTP) for this service replica to handle client or user requests.
@@ -45,15 +44,13 @@ namespace LastTopics
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(RedisConnection);
-            Database = redis.GetDatabase();
-
+          
             while (true)
             {
 
                 cancellationToken.ThrowIfCancellationRequested();
                 CalculateLastTopics();
-                var minutes = 15;
+                var minutes = 1;
                 await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
 
             }
@@ -72,7 +69,7 @@ namespace LastTopics
 
                 await docclient.OpenAsync();
                 var articleExistQuery = docclient.CreateDocumentQuery<Article>(
-                    UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x => x.time).Take(10);
+                    UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x => x.time).Take(30);
 
 
                 var tags = new Dictionary<string, int>();
@@ -81,7 +78,10 @@ namespace LastTopics
                 {
                     var random = new Random((int)DateTime.Now.Ticks);
                     var tag = article.tags[random.Next(0, article.tags.Count)];
+                    if (tags.ContainsKey(tag))
+                        continue;
                     tags.Add(tag, 1);
+                  
                    
                 }
 
@@ -94,7 +94,7 @@ namespace LastTopics
                     list.Add(new { topic = tag.Key, count = tag.Value });
                 }
 
-                await Database.StringSetAsync("LastTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
+                cache.SetValue("LastTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
 
                 ServiceEventSource.Current.ServiceMessage(this, $"Commited Last {tags.Count} Topics");
                 ApplicationInsightsClient.LogEvent($"Commited Last Topics", tags.Count.ToString());

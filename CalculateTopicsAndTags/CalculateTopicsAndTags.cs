@@ -6,12 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
-using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure;
 using YInsights.Shared.Poco;
 using YInsights.Shared.AI;
-using StackExchange.Redis;
 using YInsights.Shared.Common;
+using YInsights.Shared.Providers;
+using Microsoft.Azure.Documents.Client;
 
 namespace CalculateTopicsAndTags
 {
@@ -20,14 +20,16 @@ namespace CalculateTopicsAndTags
     /// </summary>
     internal sealed class CalculateTopicsAndTags : StatelessService
     {
-        string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
-        string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
-        string RedisConnection = CloudConfigurationManager.GetSetting("RedisConnection");
-        IDatabase Database;
-        public CalculateTopicsAndTags(StatelessServiceContext context)
+       
+        ICacheProvider cache;
+        IDocumentDBProvider documentDB;
+        public CalculateTopicsAndTags(StatelessServiceContext context, ICacheProvider cache,IDocumentDBProvider documentDB)
             : base(context)
-        { }
-
+        {
+            this.cache = cache;
+            this.documentDB = documentDB;
+        }
+      
         /// <summary>
         /// Optional override to create listeners (e.g., TCP, HTTP) for this service replica to handle client or user requests.
         /// </summary>
@@ -43,10 +45,6 @@ namespace CalculateTopicsAndTags
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-
-            ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(RedisConnection);
-            Database = redis.GetDatabase();
-
             while (true)
             {
 
@@ -62,14 +60,8 @@ namespace CalculateTopicsAndTags
         {
             try
             {
-                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-                {
-                    ConnectionMode = ConnectionMode.Direct,
-                    ConnectionProtocol = Protocol.Tcp
-                });
-
-                await docclient.OpenAsync();
-                var articleExistQuery = docclient.CreateDocumentQuery<Article>(
+               
+                var articleExistQuery = documentDB.Client.CreateDocumentQuery<Article>(
                     UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true);
 
 
@@ -88,8 +80,8 @@ namespace CalculateTopicsAndTags
                     list.Add(new { topic = tag.Key, count = tag.Value });
                 }
 
-                await Database.StringSetAsync("Topics", Newtonsoft.Json.JsonConvert.SerializeObject(list));
-                await Database.StringSetAsync("WordCloudTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)));
+               cache.SetValue("Topics", Newtonsoft.Json.JsonConvert.SerializeObject(list));
+               cache.SetValue("WordCloudTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)));
 
                 ServiceEventSource.Current.ServiceMessage(this, $"Commited {tags.Count} Topics");
                 ApplicationInsightsClient.LogEvent($"Commited Topics", tags.Count.ToString());

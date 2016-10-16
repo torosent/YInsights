@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Runtime;
 using YInsights.Shared.AI;
+using YInsights.Shared.Providers;
 
 namespace CalculateTopicsAndTags
 {
@@ -23,7 +24,7 @@ namespace CalculateTopicsAndTags
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("CalculateTopicsAndTagsType",
-                    context => new CalculateTopicsAndTags(context)).GetAwaiter().GetResult();
+                    context => new CalculateTopicsAndTags(context,new RedisProvider(),new DocumentDBProvider())).GetAwaiter().GetResult();
 
                
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(CalculateTopicsAndTags).Name);
