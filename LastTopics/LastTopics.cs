@@ -19,14 +19,15 @@ namespace LastTopics
     /// </summary>
     internal sealed class LastTopics : StatelessService
     {
-        string EndpointUri = CloudConfigurationManager.GetSetting("DocumentDBUri");
-        string PrimaryKey = CloudConfigurationManager.GetSetting("DocumentDBKey");
+       
         ICacheProvider cache;
+        private DocumentDBProvider documentDBProvider;
 
-        public LastTopics(StatelessServiceContext context,ICacheProvider cache)
+        public LastTopics(StatelessServiceContext context,ICacheProvider cache, DocumentDBProvider documentDBProvider)
             : base(context)
         {
             this.cache = cache;
+            this.documentDBProvider = documentDBProvider;
         }
 
         /// <summary>
@@ -56,19 +57,12 @@ namespace LastTopics
             }
         }
 
-        private async void CalculateLastTopics()
+        private void CalculateLastTopics()
         {
             try
             {
-                var docclient = new DocumentClient(new Uri(EndpointUri), PrimaryKey, new ConnectionPolicy
-                {
-                    ConnectionMode = ConnectionMode.Direct,
-                    ConnectionProtocol = Protocol.Tcp
-                });
-
-
-                await docclient.OpenAsync();
-                var articleExistQuery = docclient.CreateDocumentQuery<Article>(
+              
+                var articleExistQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
                     UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x => x.time).Take(30);
 
 
@@ -77,7 +71,7 @@ namespace LastTopics
                 foreach (var article in articleExistQuery)
                 {
                     var random = new Random((int)DateTime.Now.Ticks);
-                    if (tags.Count == 0)
+                    if (article.tags.Count == 0)
                         continue;
                     var tag = article.tags[random.Next(0, article.tags.Count)];
                     if (tags.ContainsKey(tag))
