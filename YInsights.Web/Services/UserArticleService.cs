@@ -42,7 +42,13 @@ namespace YInsights.Web.Services
                     var val = await redisdb.GetValue(id);
                     if (!string.IsNullOrEmpty(val))
                     {
-                        articlesList.Add(Newtonsoft.Json.JsonConvert.DeserializeObject<UserArticles>(val));
+                        var article = Newtonsoft.Json.JsonConvert.DeserializeObject<UserArticles>(val);
+                        if (article.articleid == 0)
+                        {
+                            article.articleid = article.id;
+                            redisdb.SetValue(article.articleid.ToString(), Newtonsoft.Json.JsonConvert.SerializeObject(article));
+                        }
+                        articlesList.Add(article);
                     }
                     else
                     {
@@ -107,6 +113,7 @@ namespace YInsights.Web.Services
             return articlesList.OrderByDescending(x => x.time);
         }
 
+       
         public void DeleteUserArticle(string username,int id)
         {
             var article = db.UserArticles.FirstOrDefault(x => x.username == username && x.articleid == id);

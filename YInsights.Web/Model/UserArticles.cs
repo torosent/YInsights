@@ -29,5 +29,7 @@ namespace YInsights.Web.Model
 
         [NotMapped]
         public int time { get; set; }
+        [NotMapped]
+        public int id { get; set; }
     }
 }
