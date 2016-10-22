@@ -1,3 +1,3 @@
 # YInsights
 
-Alpha version of Personalized Hacker News accoriding to the user selected topics.
+Alpha version of personalized Hacker News according to the user selected topics.
