@@ -86,10 +86,12 @@ namespace YInsights.Web.Controllers
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Profile(User inputuser)
+        public async Task<IActionResult> Profile(User inputuser)
         {
 
             ViewBag.title = "Profile";
+            ViewBag.LastTopics = await topicService.GetLastTopics();
+            ViewBag.TrendingTopics = await topicService.GetTrendingTopics();
 
             string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
 
