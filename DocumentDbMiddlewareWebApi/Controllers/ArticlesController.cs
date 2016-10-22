@@ -11,6 +11,9 @@ using YInsights.Shared.Poco;
 
 namespace DocumentDbMiddlewareWebApi.Controllers
 {
+    /// <summary>
+    /// This will be removed
+    /// </summary>
     [ServiceRequestActionFilter]
     public class ArticlesController : ApiController
     {
