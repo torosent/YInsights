@@ -13,6 +13,8 @@ using Microsoft.EntityFrameworkCore;
 using YInsights.Web.Providers;
 using YInsights.Web.Services;
 using YInsights.Web.Model;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using cloudscribe.Syndication.Models.Rss;
 
 namespace YInsights
 {
@@ -62,6 +64,7 @@ namespace YInsights
             services.AddTransient(typeof(TopicService));
             services.AddSingleton(typeof(AIService));
 
+            services.AddScoped<RssChannelProvider>();
             // services.AddMemoryCache();
 
             services.AddDbContext<YInsightsContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));

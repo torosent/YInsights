@@ -1,0 +1,23 @@
+﻿@{
+    ViewData["Title"] = "RSS Feed";
+}
+<br />
+<div class="row">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+
+        @{
+            if (!string.IsNullOrEmpty(ViewBag.link))
+            {
+                <div class="alert alert-dismissible alert-info">    
+                    <h4>Your custom feed address</h4>
+                    <p>Below you will find your custom URL address. Copy and paste this address into a RSS reader and you'll receive new updates automatically.</p>
+                    <p> <a href="@ViewBag.link" class="alert-link">@ViewBag.link</a></p>
+                </div>
+
+            }
+        }
+    </div>
+    <div class="col-lg-2"></div>
+
+</div>

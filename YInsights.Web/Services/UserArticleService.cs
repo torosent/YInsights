@@ -22,7 +22,7 @@ namespace YInsights.Web.Services
            
         }
 
-        public async Task<IEnumerable<UserArticles>> GetUserUnviewedArticles(string username,string title,string tags)
+        public async Task<IEnumerable<UserArticles>> GetUserUnviewedArticles(string username, string title = null, string tags = null)
         {
             var articlesList = new List<UserArticles>();
             string uri = "http://yinsights.northeurope.cloudapp.azure.com/api/articles";

@@ -51,13 +51,18 @@ namespace YInsights.Web.Controllers
         
 
         [Authorize]
-        public IActionResult Profile()
+        public async Task<IActionResult> Profile()
         {
             ViewBag.title = "Profile";
-        
-         
+
+
+            ViewBag.LastTopics = await topicService.GetLastTopics();
+            ViewBag.TrendingTopics = await topicService.GetTrendingTopics();
+
+
             string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
             aiService.TrackUser("ViewProfile", username);
+
             var user = userService.FindUserByUsername(username);
             if (user == null)
             {

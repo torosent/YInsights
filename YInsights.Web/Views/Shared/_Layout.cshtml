@@ -19,7 +19,7 @@
     </environment>
     <link type="text/css" rel="stylesheet" href="~/css/font-awesome.min.css" />
     @Html.ApplicationInsightsJavaScript(TelemetryConfiguration)
-    
+
 </head>
 <body>
     <div class="navbar navbar-default navbar-fixed-top">
@@ -44,6 +44,9 @@
                 <ul class="nav navbar-nav">
                     <li><a asp-area="" asp-controller="Account" asp-action="Profile">Profile</a></li>
                 </ul>
+                <ul class="nav navbar-nav">
+                    <li><a asp-area="" asp-controller="Home" asp-action="RSS">RSS</a></li>
+                </ul>
                 <ul class="nav navbar-nav navbar-right">
                     @if (User.Identity.IsAuthenticated)
                     {
@@ -64,7 +67,7 @@
             <p>&copy; 2016 - YInsights</p>
         </footer>
     </div>
-   
+
 
     <environment names="Development">
         <script src="~/lib/jquery/dist/jquery.js"></script>
@@ -73,7 +76,7 @@
         <script src="~/js/site.js" asp-append-version="true"></script>
         <script src="~/js/tag-it.js"></script>
         <script src="~/js/wordcloud2.js"></script>
-     
+
 
     </environment>
     <environment names="Staging,Production">
@@ -90,12 +93,12 @@
                 asp-fallback-test="window.jQuery && window.jQuery.fn && window.jQuery.fn.modal">
         </script>
         <script src="~/js/site.min.js" asp-append-version="true"></script>
-      
+
 
     </environment>
     <script type="text/javascript" src="~/js/jsgrid.min.js"></script>
 
-   
+
     @RenderSection("scripts", required: false)
 </body>
 </html>

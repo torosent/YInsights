@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using YInsights.Web.Services;
+using YInsights.Web.Providers;
+using System.Text.Encodings.Web;
 
 namespace YInsights.Web.Controllers
 {
@@ -18,6 +20,7 @@ namespace YInsights.Web.Controllers
         private AIService aiService;
         public HomeController(UserService _userService, TopicService _topicService, AIService _aiService)
         {
+        
             userService = _userService;
             topicService = _topicService;
             aiService = _aiService;
@@ -52,7 +55,14 @@ namespace YInsights.Web.Controllers
             return View();
         }
 
-
+        [Authorize]
+        public IActionResult RSS()
+        {
+            string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
+            var link = string.Concat("https://", HttpContext.Request.Host.ToUriComponent(), "/api/feed?id=", username);
+            ViewBag.link = link;
+            return View();
+        }
 
 
         public IActionResult Error()
