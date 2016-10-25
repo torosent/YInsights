@@ -144,37 +144,32 @@ namespace UserArticlesGenerator
         {
             var existingArticles = await GetUserExistingArticles(id);
 
-            var size = existingArticles.Count % 500;
 
-            var parExistingArticles = existingArticles.Partition(size);
-            StringBuilder queryBuilder;
-            Microsoft.Azure.Documents.SqlParameterCollection paramCollection;
+            var parExistingArticles = existingArticles.Split();
+         
 
             if (parExistingArticles.Count() > 0)
             {
                 foreach (var listOfExistingArticles in parExistingArticles)
                 {
-                   
+                    StringBuilder queryBuilder;
+                    Microsoft.Azure.Documents.SqlParameterCollection paramCollection;
                     CreateFirstQuery(topics, out queryBuilder, out paramCollection);
-
-                    if (listOfExistingArticles.Count > 0)
+                    queryBuilder.Append($" AND c.id NOT IN ( ");
+                    int idIdx = 1;
+                    foreach (var item in listOfExistingArticles)
                     {
-                        queryBuilder.Append($" AND c.id NOT IN ( ");
-                        int idIdx = 1;
-                        foreach (var item in listOfExistingArticles)
+                        queryBuilder.Append('"');
+                        queryBuilder.Append(item);
+                        queryBuilder.Append('"');
+                        if (idIdx < listOfExistingArticles.Count)
                         {
-                            queryBuilder.Append('"');
-                            queryBuilder.Append(item);
-                            queryBuilder.Append('"');
-                            if (idIdx < listOfExistingArticles.Count)
-                            {
-                                queryBuilder.Append(",");
-                            }
-
-                            idIdx++;
+                            queryBuilder.Append(",");
                         }
-                        queryBuilder.Append(')');
+
+                        idIdx++;
                     }
+                    queryBuilder.Append(')');
 
                     var queryString = queryBuilder.ToString();
                     var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
@@ -186,6 +181,8 @@ namespace UserArticlesGenerator
             }
             else
             {
+                StringBuilder queryBuilder;
+                Microsoft.Azure.Documents.SqlParameterCollection paramCollection;
                 CreateFirstQuery(topics, out queryBuilder, out paramCollection);
                 var queryString = queryBuilder.ToString();
                 var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
