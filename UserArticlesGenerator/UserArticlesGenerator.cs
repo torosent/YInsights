@@ -15,6 +15,7 @@ using System.Text;
 using YInsights.Shared.Poco;
 using YInsights.Shared.AI;
 using YInsights.Shared.Providers;
+using YInsights.Shared.Extentions;
 
 namespace UserArticlesGenerator
 {
@@ -141,54 +142,64 @@ namespace UserArticlesGenerator
 
         private async void SearchForArticles(string id, List<string> topics)
         {
-
-            int topicIdx = 1;
-            var queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
-
-            var paramCollection = new Microsoft.Azure.Documents.SqlParameterCollection();
-            foreach (var topic in topics)
-            {
-
-                queryBuilder.Append($" ARRAY_CONTAINS(c.lctags,@topic{topicIdx}) ");
-                if (topicIdx < topics.Count)
-                {
-                    queryBuilder.Append("OR ");
-                }
-                else
-                {
-                    queryBuilder.Append(")");
-                }
-                paramCollection.Add(new Microsoft.Azure.Documents.SqlParameter { Name = $"@topic{topicIdx}", Value = topic });
-
-                topicIdx++;
-            }
             var existingArticles = await GetUserExistingArticles(id);
 
-            if (existingArticles.Count > 0)
-            {
-                queryBuilder.Append($" AND c.id NOT IN ( ");
-                int idIdx = 1;
-                foreach (var item in existingArticles)
-                {
-                    queryBuilder.Append('"');
-                    queryBuilder.Append(item);
-                    queryBuilder.Append('"');
-                    if (idIdx < existingArticles.Count)
-                    {
-                        queryBuilder.Append(",");
-                    }
+            var size = existingArticles.Count % 500;
 
-                    idIdx++;
+            var parExistingArticles = existingArticles.Partition(size);
+
+
+            foreach (var listOfExistingArticles in parExistingArticles)
+            {
+                int topicIdx = 1;
+                var queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
+
+                var paramCollection = new Microsoft.Azure.Documents.SqlParameterCollection();
+                foreach (var topic in topics)
+                {
+
+                    queryBuilder.Append($" ARRAY_CONTAINS(c.lctags,@topic{topicIdx}) ");
+                    if (topicIdx < topics.Count)
+                    {
+                        queryBuilder.Append("OR ");
+                    }
+                    else
+                    {
+                        queryBuilder.Append(")");
+                    }
+                    paramCollection.Add(new Microsoft.Azure.Documents.SqlParameter { Name = $"@topic{topicIdx}", Value = topic });
+
+                    topicIdx++;
                 }
-                queryBuilder.Append(')');
+
+                if (listOfExistingArticles.Count > 0)
+                {
+                    queryBuilder.Append($" AND c.id NOT IN ( ");
+                    int idIdx = 1;
+                    foreach (var item in listOfExistingArticles)
+                    {
+                        queryBuilder.Append('"');
+                        queryBuilder.Append(item);
+                        queryBuilder.Append('"');
+                        if (idIdx < existingArticles.Count)
+                        {
+                            queryBuilder.Append(",");
+                        }
+
+                        idIdx++;
+                    }
+                    queryBuilder.Append(')');
+                }
+
+                var queryString = queryBuilder.ToString();
+                var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
+
+                var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
+                    UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
+                InsertNewArticles(id, articleQuery.ToList());
             }
 
-            var queryString = queryBuilder.ToString();
-            var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
 
-            var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
-                UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
-            InsertNewArticles(id, articleQuery.ToList());
 
 
         }
