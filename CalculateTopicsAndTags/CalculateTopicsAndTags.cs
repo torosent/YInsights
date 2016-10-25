@@ -20,16 +20,16 @@ namespace CalculateTopicsAndTags
     /// </summary>
     internal sealed class CalculateTopicsAndTags : StatelessService
     {
-       
+
         ICacheProvider cache;
         IDocumentDBProvider documentDB;
-        public CalculateTopicsAndTags(StatelessServiceContext context, ICacheProvider cache,IDocumentDBProvider documentDB)
+        public CalculateTopicsAndTags(StatelessServiceContext context, ICacheProvider cache, IDocumentDBProvider documentDB)
             : base(context)
         {
             this.cache = cache;
             this.documentDB = documentDB;
         }
-      
+
         /// <summary>
         /// Optional override to create listeners (e.g., TCP, HTTP) for this service replica to handle client or user requests.
         /// </summary>
@@ -45,46 +45,16 @@ namespace CalculateTopicsAndTags
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            while (true)
-            {
-
-                cancellationToken.ThrowIfCancellationRequested();
-                CalculateTopics();
-                var minutes = 15;
-                await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
-
-            }
-        }
-
-        private async void CalculateTopics()
-        {
             try
             {
-               
-                var articleExistQuery = documentDB.Client.CreateDocumentQuery<Article>(
-                    UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true);
-
-
-                var tags = new Dictionary<string, int>();
-                foreach (var article in articleExistQuery)
+                while (true)
                 {
-                    Tags.CalculateTags(tags, article);
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CalculateTopics();
+                    var minutes = 15;
+                    await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
                 }
-
-
-                var listTags = tags.OrderByDescending(x => x.Value);
-
-                var list = new List<dynamic>();
-                foreach (var tag in listTags)
-                {
-                    list.Add(new { topic = tag.Key, count = tag.Value });
-                }
-
-               cache.SetValue("Topics", Newtonsoft.Json.JsonConvert.SerializeObject(list));
-               cache.SetValue("WordCloudTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)));
-
-                ServiceEventSource.Current.ServiceMessage(this, $"Commited {tags.Count} Topics");
-                ApplicationInsightsClient.LogEvent($"Commited Topics", tags.Count.ToString());
             }
             catch (Exception ex)
             {
@@ -93,6 +63,37 @@ namespace CalculateTopicsAndTags
                 ServiceEventSource.Current.ServiceMessage(this, ex.Message);
 
             }
+        }
+
+        private void CalculateTopics()
+        {
+
+
+            var articleExistQuery = documentDB.Client.CreateDocumentQuery<Article>(
+                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true);
+
+
+            var tags = new Dictionary<string, int>();
+            foreach (var article in articleExistQuery)
+            {
+                Tags.CalculateTags(tags, article);
+            }
+
+
+            var listTags = tags.OrderByDescending(x => x.Value);
+
+            var list = new List<dynamic>();
+            foreach (var tag in listTags)
+            {
+                list.Add(new { topic = tag.Key, count = tag.Value });
+            }
+
+            cache.SetValue("Topics", Newtonsoft.Json.JsonConvert.SerializeObject(list));
+            cache.SetValue("WordCloudTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)));
+
+            ServiceEventSource.Current.ServiceMessage(this, $"Commited {tags.Count} Topics");
+            ApplicationInsightsClient.LogEvent($"Commited Topics", tags.Count.ToString());
+
 
         }
 

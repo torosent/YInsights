@@ -46,50 +46,17 @@ namespace TrendingTopics
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-           
-            while (true)
-            {
-
-                cancellationToken.ThrowIfCancellationRequested();
-                CalculateTrendingTopics();
-                var minutes = 15;
-                await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
-
-            }
-        }
-
-        private  void CalculateTrendingTopics()
-        {
             try
             {
-              
-
-                var currentDate = DateTime.Now.AddDays(-2).DateTimeToUnixTimestamp();
-
-          
-                var articleExistQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
-                    UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true && f.time > currentDate);
-
-
-                var tags = new Dictionary<string, int>();
-                foreach (var article in articleExistQuery)
+                while (true)
                 {
-                    Tags.CalculateTags(tags, article, false);
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CalculateTrendingTopics();
+                    var minutes = 15;
+                    await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
+
                 }
-
-
-                var listTags = tags.OrderByDescending(x => x.Value);
-
-                var list = new List<dynamic>();
-                foreach (var tag in listTags)
-                {
-                    list.Add(new { topic = tag.Key, count = tag.Value });
-                }
-
-                cache.SetValue("TrendingTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
-
-                ServiceEventSource.Current.ServiceMessage(this, $"Commited Trending {tags.Count} Topics");
-                ApplicationInsightsClient.LogEvent($"Commited Trending Topics", tags.Count.ToString());
             }
             catch (Exception ex)
             {
@@ -98,6 +65,38 @@ namespace TrendingTopics
                 ServiceEventSource.Current.ServiceMessage(this, ex.Message);
 
             }
+        }
+
+        private void CalculateTrendingTopics()
+        {
+
+            var currentDate = DateTime.Now.AddDays(-2).DateTimeToUnixTimestamp();
+
+
+            var articleExistQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
+                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true && f.time > currentDate);
+
+
+            var tags = new Dictionary<string, int>();
+            foreach (var article in articleExistQuery)
+            {
+                Tags.CalculateTags(tags, article, false);
+            }
+
+
+            var listTags = tags.OrderByDescending(x => x.Value);
+
+            var list = new List<dynamic>();
+            foreach (var tag in listTags)
+            {
+                list.Add(new { topic = tag.Key, count = tag.Value });
+            }
+
+            cache.SetValue("TrendingTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
+
+            ServiceEventSource.Current.ServiceMessage(this, $"Commited Trending {tags.Count} Topics");
+            ApplicationInsightsClient.LogEvent($"Commited Trending Topics", tags.Count.ToString());
+
 
         }
     }

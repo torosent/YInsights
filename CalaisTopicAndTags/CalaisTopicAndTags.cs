@@ -24,7 +24,7 @@ namespace CalaisTopicAndTags
     internal sealed class CalaisTopicAndTags : StatefulService
     {
         private const string URL = "https://api.thomsonreuters.com/permid/calais";
-      
+
         string apitoken = CloudConfigurationManager.GetSetting("ApiToken");
         IDocumentDBProvider documentDB;
         ICacheProvider cache;
@@ -54,33 +54,35 @@ namespace CalaisTopicAndTags
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service replica.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             Task.Run(() =>
            {
-               ProcessArticles(cancellationToken);
+               ProcessArticles();
            }, cancellationToken);
 
-            while (true)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                try
+                while (true)
                 {
+
                     ServiceEventSource.Current.ServiceMessage(this, "GetPreProcessedArticles 20 sec Cycle");
 
                     GetPreProcessedArticles();
                     await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
                 }
-                catch (Exception ex)
-                {
-                    ApplicationInsightsClient.LogException(ex);
-                    ServiceEventSource.Current.ServiceMessage(this, ex.Message);
-                }
+            }
+            catch (Exception ex)
+            {
+                ApplicationInsightsClient.LogException(ex);
+                ServiceEventSource.Current.ServiceMessage(this, ex.Message);
             }
         }
 
 
         private async void GetPreProcessedArticles()
         {
-           
+
             var articleExistQuery = documentDB.Client.CreateDocumentQuery<Article>(
                 UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == false).Take(5);
 
@@ -107,88 +109,90 @@ namespace CalaisTopicAndTags
         }
 
 
-        private async void ProcessArticles(CancellationToken cancellationToken)
+        private async void ProcessArticles()
         {
-            try
+
+
+            var articlesDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, Article>>("articlesDictionary");
+            var articlesQueue = await this.StateManager.GetOrAddAsync<IReliableQueue<string>>("articlesQueue");
+
+            while (true)
             {
-            
-                var articlesDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, Article>>("articlesDictionary");
-                var articlesQueue = await this.StateManager.GetOrAddAsync<IReliableQueue<string>>("articlesQueue");
-
-                while (true)
+                try
                 {
-                    try
+                    using (var tx = this.StateManager.CreateTransaction())
                     {
-                        using (var tx = this.StateManager.CreateTransaction())
+                        var id = await articlesQueue.TryDequeueAsync(tx);
+                        if (id.HasValue)
                         {
-                            var id = await articlesQueue.TryDequeueAsync(tx);
-                            if (id.HasValue)
+                            var article = await articlesDictionary.TryGetValueAsync(tx, id.Value);
+                            if (article.HasValue)
                             {
-                                var article = await articlesDictionary.TryGetValueAsync(tx, id.Value);
-                                if (article.HasValue)
+                                var result = ProcessArticle(article.Value).Result;
+                                if (result)
                                 {
-                                    var result = ProcessArticle(article.Value).Result;
-                                    if (result)
-                                    {
-                                        article.Value.processed = true;
-                                        var upsertResult = await documentDB.Client.UpsertDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), article.Value);
-                                        cache.SetValue(article.Value.Id, Newtonsoft.Json.JsonConvert.SerializeObject(article.Value));
+                                    article.Value.processed = true;
+                                    var upsertResult = await documentDB.Client.UpsertDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), article.Value);
+                                    cache.SetValue(article.Value.Id, Newtonsoft.Json.JsonConvert.SerializeObject(article.Value));
 
-                                        ServiceEventSource.Current.ServiceMessage(this, $"Updated article {article.Value.Id}");
-                                        ApplicationInsightsClient.LogEvent($"Updated article",article.Value.Id);
+                                    ServiceEventSource.Current.ServiceMessage(this, $"Updated article {article.Value.Id}");
+                                    ApplicationInsightsClient.LogEvent($"Updated article", article.Value.Id);
 
-                                    }
-                                    else
-                                    {
-                                        var count = await articlesDictionary.GetCountAsync(tx);
-                                        ServiceEventSource.Current.ServiceMessage(this, $"Result for {article.Value.Id} is false. List contains {count}");
-                                        ApplicationInsightsClient.LogEvent("Analyze Failed",article.Value.Id);
-                                    }
-                                    await articlesDictionary.TryRemoveAsync(tx, article.Value.Id);
                                 }
-                                await tx.CommitAsync();
+                                else
+                                {
+                                    var count = await articlesDictionary.GetCountAsync(tx);
+                                    ServiceEventSource.Current.ServiceMessage(this, $"Result for {article.Value.Id} is false. List contains {count}");
+                                    ApplicationInsightsClient.LogEvent("Analyze Failed", article.Value.Id);
+                                }
+                                await articlesDictionary.TryRemoveAsync(tx, article.Value.Id);
                             }
-
+                            await tx.CommitAsync();
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
-                        ApplicationInsightsClient.LogException(ex);
 
                     }
                 }
+
+                catch (Exception ex)
+                {
+                    ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
+                    ApplicationInsightsClient.LogException(ex);
+
+                }
             }
 
-            catch (Exception ex)
-            {
-                ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
-                ApplicationInsightsClient.LogException(ex);
-
-            }
         }
 
 
 
         private async Task<bool> ProcessArticle(Article article)
         {
-            HttpClient client = new HttpClient();
-
-            client.DefaultRequestHeaders.TryAddWithoutValidation("ContentType", "text/raw");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("X-AG-Access-Token", apitoken);
-            client.DefaultRequestHeaders.TryAddWithoutValidation("outputformat", "application/json");
-
-            var response = client.PostAsync(URL, new StringContent(article.title)).Result;
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            try
             {
-                string responseBody = await response.Content.ReadAsStringAsync();
-                ParseTopics(article, responseBody);
-                ServiceEventSource.Current.ServiceMessage(this, $"Parsed article {article.Id}");
-                return true;
+                HttpClient client = new HttpClient();
+
+                client.DefaultRequestHeaders.TryAddWithoutValidation("ContentType", "text/raw");
+                client.DefaultRequestHeaders.TryAddWithoutValidation("X-AG-Access-Token", apitoken);
+                client.DefaultRequestHeaders.TryAddWithoutValidation("outputformat", "application/json");
+
+                var response = client.PostAsync(URL, new StringContent(article.title)).Result;
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    ParseTopics(article, responseBody);
+                    ServiceEventSource.Current.ServiceMessage(this, $"Parsed article {article.Id}");
+                    return true;
+                }
+                ApplicationInsightsClient.LogEvent($"Process fail", article.Id, response.StatusCode.ToString(), response.Content.ReadAsStringAsync().Result);
+                ServiceEventSource.Current.ServiceMessage(this, $"Error with status code {article.Id} {response.StatusCode.ToString()} -  {response.Content.ReadAsStringAsync().Result}");
+                return false;
             }
-            ApplicationInsightsClient.LogEvent($"Process fail",article.Id,response.StatusCode.ToString(),response.Content.ReadAsStringAsync().Result);
-            ServiceEventSource.Current.ServiceMessage(this, $"Error with status code {article.Id} {response.StatusCode.ToString()} -  {response.Content.ReadAsStringAsync().Result}");
-            return false;
+            catch (Exception ex)
+            {
+                ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
+                ApplicationInsightsClient.LogException(ex);
+                return false;
+            }
 
         }
 

@@ -15,6 +15,7 @@ using System.Text;
 using YInsights.Shared.Poco;
 using YInsights.Shared.AI;
 using YInsights.Shared.Providers;
+using YInsights.Shared.Extentions;
 
 namespace UserArticlesGenerator
 {
@@ -23,11 +24,11 @@ namespace UserArticlesGenerator
     /// </summary>
     internal sealed class UserArticlesGenerator : StatefulService
     {
-       
+
         string SqlConnection = CloudConfigurationManager.GetSetting("SqlConnection");
         private DocumentDBProvider documentDBProvider;
 
-        
+
         public UserArticlesGenerator(StatefulServiceContext context, DocumentDBProvider documentDBProvider) : base(context)
         {
             this.documentDBProvider = documentDBProvider;
@@ -53,6 +54,7 @@ namespace UserArticlesGenerator
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
 
+            cancellationToken.ThrowIfCancellationRequested();
 
             Task.Run(() =>
             {
@@ -61,15 +63,13 @@ namespace UserArticlesGenerator
 
             while (true)
             {
-                cancellationToken.ThrowIfCancellationRequested();
 
                 GetUsersAndTopics();
-
                 await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
             }
         }
 
-       
+
         private async void GetUsersAndTopics()
         {
             using (var sqlConnection =
@@ -88,7 +88,7 @@ namespace UserArticlesGenerator
                     while (reader.Read())
                     {
                         var id = reader[0].ToString();
-                        var topics = reader[1].ToString().ToLower() ;
+                        var topics = reader[1].ToString().ToLower();
                         var contains = await usersDictionary.ContainsKeyAsync(tx, id);
                         if (!contains)
                         {
@@ -110,32 +110,25 @@ namespace UserArticlesGenerator
 
                 while (true)
                 {
-                    try
+
+                    using (var tx = this.StateManager.CreateTransaction())
                     {
-                        using (var tx = this.StateManager.CreateTransaction())
+                        var idValue = await usersQueue.TryDequeueAsync(tx);
+                        if (idValue.HasValue)
                         {
-                            var idValue = await usersQueue.TryDequeueAsync(tx);
-                            if (idValue.HasValue)
+                            var user = await usersDictionary.TryGetValueAsync(tx, idValue.Value);
+                            if (user.HasValue)
                             {
-                                var user = await usersDictionary.TryGetValueAsync(tx, idValue.Value);
-                                if (user.HasValue)
-                                {
-                                    var id = user.Value.Item1;
-                                    var topics = (List<string>)Newtonsoft.Json.JsonConvert.DeserializeObject(user.Value.Item2, typeof(List<string>));
-                                    SearchForArticles(id, topics);
-                                    await usersDictionary.TryRemoveAsync(tx, user.Value.Item1);
-                                }
-                                await tx.CommitAsync();
+                                var id = user.Value.Item1;
+                                var topics = (List<string>)Newtonsoft.Json.JsonConvert.DeserializeObject(user.Value.Item2, typeof(List<string>));
+                                SearchForArticles(id, topics);
+                                await usersDictionary.TryRemoveAsync(tx, user.Value.Item1);
                             }
-
+                            await tx.CommitAsync();
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
-                        ApplicationInsightsClient.LogException(ex);
 
                     }
+
                 }
             }
 
@@ -149,9 +142,15 @@ namespace UserArticlesGenerator
 
         private async void SearchForArticles(string id, List<string> topics)
         {
-            try
+            var existingArticles = await GetUserExistingArticles(id);
+
+            var size = existingArticles.Count % 500;
+
+            var parExistingArticles = existingArticles.Partition(size);
+
+
+            foreach (var listOfExistingArticles in parExistingArticles)
             {
-             
                 int topicIdx = 1;
                 var queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
 
@@ -172,13 +171,12 @@ namespace UserArticlesGenerator
 
                     topicIdx++;
                 }
-                var existingArticles = await GetUserExistingArticles(id);
 
-                if (existingArticles.Count > 0)
+                if (listOfExistingArticles.Count > 0)
                 {
                     queryBuilder.Append($" AND c.id NOT IN ( ");
                     int idIdx = 1;
-                    foreach (var item in existingArticles)
+                    foreach (var item in listOfExistingArticles)
                     {
                         queryBuilder.Append('"');
                         queryBuilder.Append(item);
@@ -187,7 +185,7 @@ namespace UserArticlesGenerator
                         {
                             queryBuilder.Append(",");
                         }
-                       
+
                         idIdx++;
                     }
                     queryBuilder.Append(')');
@@ -200,12 +198,9 @@ namespace UserArticlesGenerator
                     UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
                 InsertNewArticles(id, articleQuery.ToList());
             }
-            catch (Exception ex)
-            {
-                ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
-                ApplicationInsightsClient.LogException(ex);
 
-            }
+
+
 
         }
         private async void InsertNewArticles(string username, List<string> articles)
