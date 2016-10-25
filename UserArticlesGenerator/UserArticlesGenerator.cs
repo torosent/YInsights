@@ -147,50 +147,46 @@ namespace UserArticlesGenerator
             var size = existingArticles.Count % 500;
 
             var parExistingArticles = existingArticles.Partition(size);
+            StringBuilder queryBuilder;
+            Microsoft.Azure.Documents.SqlParameterCollection paramCollection;
 
-
-            foreach (var listOfExistingArticles in parExistingArticles)
+            if (parExistingArticles.Count() > 0)
             {
-                int topicIdx = 1;
-                var queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
-
-                var paramCollection = new Microsoft.Azure.Documents.SqlParameterCollection();
-                foreach (var topic in topics)
+                foreach (var listOfExistingArticles in parExistingArticles)
                 {
+                   
+                    CreateFirstQuery(topics, out queryBuilder, out paramCollection);
 
-                    queryBuilder.Append($" ARRAY_CONTAINS(c.lctags,@topic{topicIdx}) ");
-                    if (topicIdx < topics.Count)
+                    if (listOfExistingArticles.Count > 0)
                     {
-                        queryBuilder.Append("OR ");
-                    }
-                    else
-                    {
-                        queryBuilder.Append(")");
-                    }
-                    paramCollection.Add(new Microsoft.Azure.Documents.SqlParameter { Name = $"@topic{topicIdx}", Value = topic });
-
-                    topicIdx++;
-                }
-
-                if (listOfExistingArticles.Count > 0)
-                {
-                    queryBuilder.Append($" AND c.id NOT IN ( ");
-                    int idIdx = 1;
-                    foreach (var item in listOfExistingArticles)
-                    {
-                        queryBuilder.Append('"');
-                        queryBuilder.Append(item);
-                        queryBuilder.Append('"');
-                        if (idIdx < listOfExistingArticles.Count)
+                        queryBuilder.Append($" AND c.id NOT IN ( ");
+                        int idIdx = 1;
+                        foreach (var item in listOfExistingArticles)
                         {
-                            queryBuilder.Append(",");
+                            queryBuilder.Append('"');
+                            queryBuilder.Append(item);
+                            queryBuilder.Append('"');
+                            if (idIdx < listOfExistingArticles.Count)
+                            {
+                                queryBuilder.Append(",");
+                            }
+
+                            idIdx++;
                         }
-
-                        idIdx++;
+                        queryBuilder.Append(')');
                     }
-                    queryBuilder.Append(')');
-                }
 
+                    var queryString = queryBuilder.ToString();
+                    var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
+
+                    var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
+                        UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
+                    InsertNewArticles(id, articleQuery.ToList());
+                }
+            }
+            else
+            {
+                CreateFirstQuery(topics, out queryBuilder, out paramCollection);
                 var queryString = queryBuilder.ToString();
                 var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
 
@@ -203,6 +199,30 @@ namespace UserArticlesGenerator
 
 
         }
+
+        private static void CreateFirstQuery(List<string> topics, out StringBuilder queryBuilder, out Microsoft.Azure.Documents.SqlParameterCollection paramCollection)
+        {
+            int topicIdx = 1;
+            queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
+            paramCollection = new Microsoft.Azure.Documents.SqlParameterCollection();
+            foreach (var topic in topics)
+            {
+
+                queryBuilder.Append($" ARRAY_CONTAINS(c.lctags,@topic{topicIdx}) ");
+                if (topicIdx < topics.Count)
+                {
+                    queryBuilder.Append("OR ");
+                }
+                else
+                {
+                    queryBuilder.Append(")");
+                }
+                paramCollection.Add(new Microsoft.Azure.Documents.SqlParameter { Name = $"@topic{topicIdx}", Value = topic });
+
+                topicIdx++;
+            }
+        }
+
         private async void InsertNewArticles(string username, List<string> articles)
         {
             if (articles.Count > 0)
