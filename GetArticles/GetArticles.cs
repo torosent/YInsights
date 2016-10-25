@@ -40,34 +40,15 @@ namespace GetArticles
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-           
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                GetArticlesFromHN();
-
-                await Task.Delay(TimeSpan.FromMinutes(15), cancellationToken);
-            }
-        }
-
-        private async void GetArticlesFromHN()
-        {
             try
             {
-                var responseBody = string.Empty;
-                using (var client = new HttpClient())
+                while (true)
                 {
-                    HttpResponseMessage response = await client.GetAsync("https://hacker-news.firebaseio.com/v0/newstories.json");
-                    response.EnsureSuccessStatusCode();
-                    responseBody = await response.Content.ReadAsStringAsync();
-                }
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                var stories = (string[])Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody, typeof(string[]));
-                foreach (var storyId in stories)
-                {
-                    SendToServiceBus(storyId);
+                    GetArticlesFromHN();
 
+                    await Task.Delay(TimeSpan.FromMinutes(15), cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -76,6 +57,26 @@ namespace GetArticles
 
                 ServiceEventSource.Current.ServiceMessage(this.Context, $"{ex.Message}");
             }
+        }
+
+        private async void GetArticlesFromHN()
+        {
+
+            var responseBody = string.Empty;
+            using (var client = new HttpClient())
+            {
+                HttpResponseMessage response = await client.GetAsync("https://hacker-news.firebaseio.com/v0/newstories.json");
+                response.EnsureSuccessStatusCode();
+                responseBody = await response.Content.ReadAsStringAsync();
+            }
+
+            var stories = (string[])Newtonsoft.Json.JsonConvert.DeserializeObject(responseBody, typeof(string[]));
+            foreach (var storyId in stories)
+            {
+                SendToServiceBus(storyId);
+
+            }
+
 
 
         }
@@ -89,13 +90,13 @@ namespace GetArticles
             var servicePartitionClient = new ServicePartitionClient<ServiceBusQueueCommunicationClient>(factory, uri);
             servicePartitionClient.InvokeWithRetry(c => c.SendMessage(CreateMessage(storyId, storyId)));
             ServiceEventSource.Current.ServiceMessage(this.Context, $" Sending {storyId} to be processed");
-            ApplicationInsightsClient.LogEvent("Send to process",storyId);
+            ApplicationInsightsClient.LogEvent("Send to process", storyId);
 
         }
 
         private BrokeredMessage CreateMessage(string messageId, string messageBody)
         {
-           
+
             var message = new BrokeredMessage(messageBody);
             message.MessageId = messageId;
             return message;

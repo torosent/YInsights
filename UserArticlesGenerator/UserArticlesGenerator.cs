@@ -23,11 +23,11 @@ namespace UserArticlesGenerator
     /// </summary>
     internal sealed class UserArticlesGenerator : StatefulService
     {
-       
+
         string SqlConnection = CloudConfigurationManager.GetSetting("SqlConnection");
         private DocumentDBProvider documentDBProvider;
 
-        
+
         public UserArticlesGenerator(StatefulServiceContext context, DocumentDBProvider documentDBProvider) : base(context)
         {
             this.documentDBProvider = documentDBProvider;
@@ -53,6 +53,7 @@ namespace UserArticlesGenerator
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
 
+            cancellationToken.ThrowIfCancellationRequested();
 
             Task.Run(() =>
             {
@@ -61,15 +62,13 @@ namespace UserArticlesGenerator
 
             while (true)
             {
-                cancellationToken.ThrowIfCancellationRequested();
 
                 GetUsersAndTopics();
-
                 await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
             }
         }
 
-       
+
         private async void GetUsersAndTopics()
         {
             using (var sqlConnection =
@@ -88,7 +87,7 @@ namespace UserArticlesGenerator
                     while (reader.Read())
                     {
                         var id = reader[0].ToString();
-                        var topics = reader[1].ToString().ToLower() ;
+                        var topics = reader[1].ToString().ToLower();
                         var contains = await usersDictionary.ContainsKeyAsync(tx, id);
                         if (!contains)
                         {
@@ -110,32 +109,25 @@ namespace UserArticlesGenerator
 
                 while (true)
                 {
-                    try
+
+                    using (var tx = this.StateManager.CreateTransaction())
                     {
-                        using (var tx = this.StateManager.CreateTransaction())
+                        var idValue = await usersQueue.TryDequeueAsync(tx);
+                        if (idValue.HasValue)
                         {
-                            var idValue = await usersQueue.TryDequeueAsync(tx);
-                            if (idValue.HasValue)
+                            var user = await usersDictionary.TryGetValueAsync(tx, idValue.Value);
+                            if (user.HasValue)
                             {
-                                var user = await usersDictionary.TryGetValueAsync(tx, idValue.Value);
-                                if (user.HasValue)
-                                {
-                                    var id = user.Value.Item1;
-                                    var topics = (List<string>)Newtonsoft.Json.JsonConvert.DeserializeObject(user.Value.Item2, typeof(List<string>));
-                                    SearchForArticles(id, topics);
-                                    await usersDictionary.TryRemoveAsync(tx, user.Value.Item1);
-                                }
-                                await tx.CommitAsync();
+                                var id = user.Value.Item1;
+                                var topics = (List<string>)Newtonsoft.Json.JsonConvert.DeserializeObject(user.Value.Item2, typeof(List<string>));
+                                SearchForArticles(id, topics);
+                                await usersDictionary.TryRemoveAsync(tx, user.Value.Item1);
                             }
-
+                            await tx.CommitAsync();
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
-                        ApplicationInsightsClient.LogException(ex);
 
                     }
+
                 }
             }
 
@@ -149,63 +141,55 @@ namespace UserArticlesGenerator
 
         private async void SearchForArticles(string id, List<string> topics)
         {
-            try
+
+            int topicIdx = 1;
+            var queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
+
+            var paramCollection = new Microsoft.Azure.Documents.SqlParameterCollection();
+            foreach (var topic in topics)
             {
-             
-                int topicIdx = 1;
-                var queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
 
-                var paramCollection = new Microsoft.Azure.Documents.SqlParameterCollection();
-                foreach (var topic in topics)
+                queryBuilder.Append($" ARRAY_CONTAINS(c.lctags,@topic{topicIdx}) ");
+                if (topicIdx < topics.Count)
                 {
-
-                    queryBuilder.Append($" ARRAY_CONTAINS(c.lctags,@topic{topicIdx}) ");
-                    if (topicIdx < topics.Count)
-                    {
-                        queryBuilder.Append("OR ");
-                    }
-                    else
-                    {
-                        queryBuilder.Append(")");
-                    }
-                    paramCollection.Add(new Microsoft.Azure.Documents.SqlParameter { Name = $"@topic{topicIdx}", Value = topic });
-
-                    topicIdx++;
+                    queryBuilder.Append("OR ");
                 }
-                var existingArticles = await GetUserExistingArticles(id);
-
-                if (existingArticles.Count > 0)
+                else
                 {
-                    queryBuilder.Append($" AND c.id NOT IN ( ");
-                    int idIdx = 1;
-                    foreach (var item in existingArticles)
-                    {
-                        queryBuilder.Append('"');
-                        queryBuilder.Append(item);
-                        queryBuilder.Append('"');
-                        if (idIdx < existingArticles.Count)
-                        {
-                            queryBuilder.Append(",");
-                        }
-                       
-                        idIdx++;
-                    }
-                    queryBuilder.Append(')');
+                    queryBuilder.Append(")");
                 }
+                paramCollection.Add(new Microsoft.Azure.Documents.SqlParameter { Name = $"@topic{topicIdx}", Value = topic });
 
-                var queryString = queryBuilder.ToString();
-                var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
-
-                var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
-                    UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
-                InsertNewArticles(id, articleQuery.ToList());
+                topicIdx++;
             }
-            catch (Exception ex)
+            var existingArticles = await GetUserExistingArticles(id);
+
+            if (existingArticles.Count > 0)
             {
-                ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
-                ApplicationInsightsClient.LogException(ex);
+                queryBuilder.Append($" AND c.id NOT IN ( ");
+                int idIdx = 1;
+                foreach (var item in existingArticles)
+                {
+                    queryBuilder.Append('"');
+                    queryBuilder.Append(item);
+                    queryBuilder.Append('"');
+                    if (idIdx < existingArticles.Count)
+                    {
+                        queryBuilder.Append(",");
+                    }
 
+                    idIdx++;
+                }
+                queryBuilder.Append(')');
             }
+
+            var queryString = queryBuilder.ToString();
+            var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
+
+            var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
+                UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
+            InsertNewArticles(id, articleQuery.ToList());
+
 
         }
         private async void InsertNewArticles(string username, List<string> articles)

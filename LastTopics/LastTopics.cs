@@ -19,11 +19,11 @@ namespace LastTopics
     /// </summary>
     internal sealed class LastTopics : StatelessService
     {
-       
+
         ICacheProvider cache;
         private DocumentDBProvider documentDBProvider;
 
-        public LastTopics(StatelessServiceContext context,ICacheProvider cache, DocumentDBProvider documentDBProvider)
+        public LastTopics(StatelessServiceContext context, ICacheProvider cache, DocumentDBProvider documentDBProvider)
             : base(context)
         {
             this.cache = cache;
@@ -45,55 +45,18 @@ namespace LastTopics
         /// <param name="cancellationToken">Canceled when Service Fabric needs to shut down this service instance.</param>
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-          
-            while (true)
-            {
-
-                cancellationToken.ThrowIfCancellationRequested();
-                CalculateLastTopics();
-                var minutes = 1;
-                await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
-
-            }
-        }
-
-        private void CalculateLastTopics()
-        {
             try
             {
-              
-                var articleExistQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
-                    UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x => x.time).Take(30);
 
-
-                var tags = new Dictionary<string, int>();
-                
-                foreach (var article in articleExistQuery)
+                while (true)
                 {
-                    var random = new Random((int)DateTime.Now.Ticks);
-                    if (article.tags.Count == 0)
-                        continue;
-                    var tag = article.tags[random.Next(0, article.tags.Count)];
-                    if (tags.ContainsKey(tag))
-                        continue;
-                    tags.Add(tag, 1);
-                  
-                   
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CalculateLastTopics();
+                    var minutes = 1;
+                    await Task.Delay(TimeSpan.FromMinutes(minutes), cancellationToken);
+
                 }
-
-
-                var listTags = tags.OrderByDescending(x => x.Value);
-
-                var list = new List<dynamic>();
-                foreach (var tag in listTags)
-                {
-                    list.Add(new { topic = tag.Key, count = tag.Value });
-                }
-
-                cache.SetValue("LastTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
-
-                ServiceEventSource.Current.ServiceMessage(this, $"Commited Last {tags.Count} Topics");
-                ApplicationInsightsClient.LogEvent($"Commited Last Topics", tags.Count.ToString());
             }
             catch (Exception ex)
             {
@@ -102,6 +65,44 @@ namespace LastTopics
                 ServiceEventSource.Current.ServiceMessage(this, ex.Message);
 
             }
+        }
+
+        private void CalculateLastTopics()
+        {
+
+            var articleExistQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
+                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true).OrderByDescending(x => x.time).Take(30);
+
+
+            var tags = new Dictionary<string, int>();
+
+            foreach (var article in articleExistQuery)
+            {
+                var random = new Random((int)DateTime.Now.Ticks);
+                if (article.tags.Count == 0)
+                    continue;
+                var tag = article.tags[random.Next(0, article.tags.Count)];
+                if (tags.ContainsKey(tag))
+                    continue;
+                tags.Add(tag, 1);
+
+
+            }
+
+
+            var listTags = tags.OrderByDescending(x => x.Value);
+
+            var list = new List<dynamic>();
+            foreach (var tag in listTags)
+            {
+                list.Add(new { topic = tag.Key, count = tag.Value });
+            }
+
+            cache.SetValue("LastTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
+
+            ServiceEventSource.Current.ServiceMessage(this, $"Commited Last {tags.Count} Topics");
+            ApplicationInsightsClient.LogEvent($"Commited Last Topics", tags.Count.ToString());
+
 
         }
     }

@@ -10,7 +10,7 @@ namespace YInsights.Shared.Common
 {
     public static class Tags
     {
-        private static string[] Exclude = { "Computing", "Software", "Business", "Economy", "Human Interest", "Politics", "Environment", "Social Issues","HN","Labor","Other" };
+        private static string[] Exclude = { "Computing", "Software", "Business", "Economy", "Human Interest", "Politics", "Environment", "Social Issues","HN","Labor","Other","Business intelligence" };
         public static void CalculateTags(Dictionary<string, int> tags, Article article, bool includeTags = true)
         {
 
