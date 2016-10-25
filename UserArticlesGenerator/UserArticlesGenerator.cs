@@ -181,7 +181,7 @@ namespace UserArticlesGenerator
                         queryBuilder.Append('"');
                         queryBuilder.Append(item);
                         queryBuilder.Append('"');
-                        if (idIdx < existingArticles.Count)
+                        if (idIdx < listOfExistingArticles.Count)
                         {
                             queryBuilder.Append(",");
                         }
