@@ -123,10 +123,10 @@ namespace UserArticlesGenerator
                                 var topics = (List<string>)Newtonsoft.Json.JsonConvert.DeserializeObject(user.Value.Item2, typeof(List<string>));
                                 SearchForArticles(id, topics);
                                 await usersDictionary.TryRemoveAsync(tx, user.Value.Item1);
-                            }
-                            await tx.CommitAsync();
+                            }   
                         }
-
+                        await tx.CommitAsync();
+                        
                     }
 
                 }
@@ -140,15 +140,15 @@ namespace UserArticlesGenerator
             }
         }
 
-        private async void SearchForArticles(string id, List<string> topics)
+        private  void SearchForArticles(string id, List<string> topics)
         {
-            var existingArticles = await GetUserExistingArticles(id);
+            var existingArticles =  GetUserExistingArticles(id);
 
 
             var parExistingArticles = existingArticles.Split();
          
 
-            if (parExistingArticles.Count() > 0)
+            if (existingArticles.Count() > 0)
             {
                 foreach (var listOfExistingArticles in parExistingArticles)
                 {
@@ -220,7 +220,7 @@ namespace UserArticlesGenerator
             }
         }
 
-        private async void InsertNewArticles(string username, List<string> articles)
+        private  void InsertNewArticles(string username, List<string> articles)
         {
             if (articles.Count > 0)
             {
@@ -238,18 +238,18 @@ namespace UserArticlesGenerator
                         insertCmd.Parameters.Add(new SqlParameter("@param3", false));
                         insertCmd.Parameters.Add(new SqlParameter("@param4", DateTime.Now));
                         insertCmd.Transaction = trans;
-                        await insertCmd.ExecuteNonQueryAsync();
+                        insertCmd.ExecuteNonQuery();
                         ApplicationInsightsClient.LogEvent("Added article for user", username, article);
 
                     }
-
+                   
                     trans.Commit();
 
                 }
             }
         }
 
-        private async Task<List<string>> GetUserExistingArticles(string id)
+        private List<string> GetUserExistingArticles(string id)
         {
             var articles = new List<string>();
             using (var sqlConnection =
@@ -258,7 +258,7 @@ namespace UserArticlesGenerator
                 sqlConnection.Open();
                 var sql = $"SELECT articleid FROM UserArticles where username = '{id}'";
                 var cmd = new SqlCommand(sql, sqlConnection);
-                var reader = await cmd.ExecuteReaderAsync();
+                var reader = cmd.ExecuteReader();
 
                 while (reader.Read())
                 {
