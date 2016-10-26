@@ -63,9 +63,21 @@ namespace UserArticlesGenerator
 
             while (true)
             {
-
-                GetUsersAndTopics();
-                await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+                try
+                {
+                    ApplicationInsightsClient.LogEvent("Starting GetUsersAndTopics");
+                    GetUsersAndTopics();
+                    await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
+                    ApplicationInsightsClient.LogException(ex);
+                }
             }
         }
 
@@ -103,14 +115,14 @@ namespace UserArticlesGenerator
 
         private async void GenerateUsersArticles()
         {
-            try
+
+            var usersDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, Tuple<string, string>>>("usersDictionary");
+            var usersQueue = await this.StateManager.GetOrAddAsync<IReliableQueue<string>>("usersQueue");
+
+            while (true)
             {
-                var usersDictionary = await this.StateManager.GetOrAddAsync<IReliableDictionary<string, Tuple<string, string>>>("usersDictionary");
-                var usersQueue = await this.StateManager.GetOrAddAsync<IReliableQueue<string>>("usersQueue");
-
-                while (true)
+                try
                 {
-
                     using (var tx = this.StateManager.CreateTransaction())
                     {
                         var idValue = await usersQueue.TryDequeueAsync(tx);
@@ -123,85 +135,33 @@ namespace UserArticlesGenerator
                                 var topics = (List<string>)Newtonsoft.Json.JsonConvert.DeserializeObject(user.Value.Item2, typeof(List<string>));
                                 SearchForArticles(id, topics);
                                 await usersDictionary.TryRemoveAsync(tx, user.Value.Item1);
-                            }   
+                            }
+                            await tx.CommitAsync();
                         }
-                        await tx.CommitAsync();
-                        
+
                     }
-
                 }
-            }
-
-            catch (Exception ex)
-            {
-                ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
-                ApplicationInsightsClient.LogException(ex);
-
-            }
-        }
-
-        private  void SearchForArticles(string id, List<string> topics)
-        {
-            var existingArticles =  GetUserExistingArticles(id);
-
-
-            var parExistingArticles = existingArticles.Split();
-         
-
-            if (existingArticles.Count() > 0)
-            {
-                foreach (var listOfExistingArticles in parExistingArticles)
+                catch (OperationCanceledException)
                 {
-                    StringBuilder queryBuilder;
-                    Microsoft.Azure.Documents.SqlParameterCollection paramCollection;
-                    CreateFirstQuery(topics, out queryBuilder, out paramCollection);
-                    queryBuilder.Append($" AND c.id NOT IN ( ");
-                    int idIdx = 1;
-                    foreach (var item in listOfExistingArticles)
-                    {
-                        queryBuilder.Append('"');
-                        queryBuilder.Append(item);
-                        queryBuilder.Append('"');
-                        if (idIdx < listOfExistingArticles.Count)
-                        {
-                            queryBuilder.Append(",");
-                        }
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    ServiceEventSource.Current.ServiceMessage(this, ex.Message, ex);
+                    ApplicationInsightsClient.LogException(ex);
 
-                        idIdx++;
-                    }
-                    queryBuilder.Append(')');
-
-                    var queryString = queryBuilder.ToString();
-                    var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
-
-                    var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
-                        UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
-                    InsertNewArticles(id, articleQuery.ToList());
                 }
             }
-            else
-            {
-                StringBuilder queryBuilder;
-                Microsoft.Azure.Documents.SqlParameterCollection paramCollection;
-                CreateFirstQuery(topics, out queryBuilder, out paramCollection);
-                var queryString = queryBuilder.ToString();
-                var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
-
-                var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
-                    UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable().Select(x => x.Id);
-                InsertNewArticles(id, articleQuery.ToList());
-            }
-
-
-
 
         }
 
-        private static void CreateFirstQuery(List<string> topics, out StringBuilder queryBuilder, out Microsoft.Azure.Documents.SqlParameterCollection paramCollection)
+        private async void SearchForArticles(string id, List<string> topics)
         {
+
             int topicIdx = 1;
-            queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
-            paramCollection = new Microsoft.Azure.Documents.SqlParameterCollection();
+            var queryBuilder = new StringBuilder("SELECT * FROM articles c WHERE (");
+
+            var paramCollection = new Microsoft.Azure.Documents.SqlParameterCollection();
             foreach (var topic in topics)
             {
 
@@ -218,11 +178,46 @@ namespace UserArticlesGenerator
 
                 topicIdx++;
             }
-        }
 
-        private  void InsertNewArticles(string username, List<string> articles)
+            var queryString = queryBuilder.ToString();
+            var query = new Microsoft.Azure.Documents.SqlQuerySpec(queryString, paramCollection);
+
+            var articleQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
+             UriFactory.CreateDocumentCollectionUri("articles", "article"), query).AsEnumerable();
+
+            var articles = articleQuery.ToList().DistinctBy(x => x.title);
+
+            var existingArticles = await GetUserExistingArticles(id);
+
+            var finalList = articles.AsParallel().Where(x => !existingArticles.Any(y => y == x.Id)).Select(x => x.Id);
+            //if (existingArticles.Count > 0)
+            //{
+            //    queryBuilder.Append($" AND c.id NOT IN ( ");
+            //    int idIdx = 1;
+            //    foreach (var item in existingArticles)
+            //    {
+            //        queryBuilder.Append('"');
+            //        queryBuilder.Append(item);
+            //        queryBuilder.Append('"');
+            //        if (idIdx < existingArticles.Count)
+            //        {
+            //            queryBuilder.Append(",");
+            //        }
+
+            //        idIdx++;
+            //    }
+            //    queryBuilder.Append(')');
+            //}
+
+
+
+            InsertNewArticles(id, finalList);
+
+
+        }
+        private async void InsertNewArticles(string username, IEnumerable<string> articles)
         {
-            if (articles.Count > 0)
+            if (articles.Any())
             {
                 using (var sqlConnection =
                            new SqlConnection(SqlConnection))
@@ -238,18 +233,18 @@ namespace UserArticlesGenerator
                         insertCmd.Parameters.Add(new SqlParameter("@param3", false));
                         insertCmd.Parameters.Add(new SqlParameter("@param4", DateTime.Now));
                         insertCmd.Transaction = trans;
-                        insertCmd.ExecuteNonQuery();
+                        await insertCmd.ExecuteNonQueryAsync();
                         ApplicationInsightsClient.LogEvent("Added article for user", username, article);
 
                     }
-                   
+
                     trans.Commit();
 
                 }
             }
         }
 
-        private List<string> GetUserExistingArticles(string id)
+        private async Task<List<string>> GetUserExistingArticles(string id)
         {
             var articles = new List<string>();
             using (var sqlConnection =
@@ -258,7 +253,7 @@ namespace UserArticlesGenerator
                 sqlConnection.Open();
                 var sql = $"SELECT articleid FROM UserArticles where username = '{id}'";
                 var cmd = new SqlCommand(sql, sqlConnection);
-                var reader = cmd.ExecuteReader();
+                var reader = await cmd.ExecuteReaderAsync();
 
                 while (reader.Read())
                 {
