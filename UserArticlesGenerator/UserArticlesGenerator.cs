@@ -67,7 +67,7 @@ namespace UserArticlesGenerator
                 {
                     ApplicationInsightsClient.LogEvent("Starting GetUsersAndTopics");
                     GetUsersAndTopics();
-                    await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
+                    await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken); // Just a cron job. We can make it smarter
                 }
                 catch (OperationCanceledException)
                 {
@@ -155,6 +155,12 @@ namespace UserArticlesGenerator
 
         }
 
+        /// <summary>
+        /// Must change this method!!! It will fail with when the database will become larger.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="topics"></param>
+
         private async void SearchForArticles(string id, List<string> topics)
         {
 
@@ -189,7 +195,7 @@ namespace UserArticlesGenerator
 
             var existingArticles = await GetUserExistingArticles(id);
 
-            var finalList = articles.AsParallel().Where(x => !existingArticles.Any(y => y == x.Id)).Select(x => x.Id);
+            var finalList = articles.AsParallel().Where(x => !existingArticles.Any(y => y == x.Id)).Select(x => x.Id); 
             //if (existingArticles.Count > 0)
             //{
             //    queryBuilder.Append($" AND c.id NOT IN ( ");
