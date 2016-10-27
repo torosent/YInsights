@@ -7,7 +7,6 @@ using YInsights.Web.Providers;
 using cloudscribe.Syndication.Models.Rss;
 using YInsights.Web.Extentions;
 
-// For more information on enabling Web API for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace YInsights.Web.Controllers
 {

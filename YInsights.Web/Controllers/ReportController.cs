@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 using YInsights.Web.Model;
 using YInsights.Web.Services;
 
-// For more information on enabling MVC for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace YInsights.Web.Controllers
 {
@@ -49,33 +48,6 @@ namespace YInsights.Web.Controllers
             }
             return null;
         }
-        [Authorize]
-        public async Task<IActionResult> LastTopics()
-        {
-            try
-            {
-                var topicsList = await topicService.GetTopics(200);
-                return Json(topicsList);
-            }
-            catch (Exception ex)
-            {
-                aiService.TrackException(ex);
-            }
-            return null;
-        }
-        [Authorize]
-        public async Task<IActionResult> TrendingTopics()
-        {
-            try
-            {
-                var topicsList = await topicService.GetTopics(200);
-                return Json(topicsList);
-            }
-            catch (Exception ex)
-            {
-                aiService.TrackException(ex);
-            }
-            return null;
-        }
+    
     }
 }
