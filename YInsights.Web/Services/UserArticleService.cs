@@ -11,110 +11,79 @@ using YInsights.Web.Providers;
 
 namespace YInsights.Web.Services
 {
-    public class UserArticleService:IUserArticleService
-    { 
+    public class UserArticleService : IUserArticleService
+    {
         private readonly YInsightsContext db;
         private readonly RedisProvider redisdb;
-        public UserArticleService(YInsightsContext _db,RedisProvider _redisdb)
+        public UserArticleService(YInsightsContext _db, RedisProvider _redisdb)
         {
             db = _db;
             redisdb = _redisdb;
-           
+
         }
 
-        public async Task<IEnumerable<UserArticles>> GetUserUnviewedArticles(string username, string title = null, string tags = null)
+        public async Task<Tuple<IEnumerable<UserArticles>, int>> GetUserUnviewedArticles(string username, string title = null, string tags = null, int pageIndex = -1, int pageSize = -1)
         {
             var articlesList = new List<UserArticles>();
-            string uri = "http://yinsights.northeurope.cloudapp.azure.com/api/articles";
-          
-
-            using (var client = new HttpClient())
+            var query = db.UserArticles.Where(x => x.username == username && x.isviewed != true).OrderByDescending(x => x.Id);
+            var count = db.UserArticles.Count(x => x.username == username && x.isviewed != true);
+            if (pageIndex > -1 && string.IsNullOrEmpty(title) && string.IsNullOrEmpty(tags))
             {
-                client.BaseAddress = new Uri(uri);
+                query = query.Skip(pageIndex).Take(pageSize).OrderByDescending(x => x.Id); ;
+            }
 
-                var articlesIds = db.UserArticles.Where(x => x.username == username && x.isviewed != true).Select(x => x.articleid.ToString()).ToList();
+            var articlesIds = query.Select(x => x.articleid.ToString());
+            var articlesToDb = new List<string>();
 
-                var articlesToDb = new List<string>();
+            foreach (var id in articlesIds)
+            {
 
-                foreach (var id in articlesIds)
+                var val = await redisdb.GetValue(id);
+                if (!string.IsNullOrEmpty(val))
                 {
-
-                    var val = await redisdb.GetValue(id);
-                    if (!string.IsNullOrEmpty(val))
+                    var article = Newtonsoft.Json.JsonConvert.DeserializeObject<UserArticles>(val);
+                    if (article.articleid == 0)
                     {
-                        var article = Newtonsoft.Json.JsonConvert.DeserializeObject<UserArticles>(val);
-                        if (article.articleid == 0)
-                        {
-                            article.articleid = article.id;
-                            redisdb.SetValue(article.articleid.ToString(), Newtonsoft.Json.JsonConvert.SerializeObject(article));
-                        }
-                        articlesList.Add(article);
+                        article.articleid = article.id;
+                        redisdb.SetValue(article.articleid.ToString(), Newtonsoft.Json.JsonConvert.SerializeObject(article));
                     }
-                    else
-                    {
-                        articlesToDb.Add(id);
-                    }
+                    articlesList.Add(article);
                 }
-
-
-
-                if (articlesToDb.Count > 0)
+                else
                 {
-                    string jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(articlesToDb);
-                    using (HttpContent content = new StringContent(jsonString, System.Text.Encoding.UTF8, "application/json"))
-                    {
-
-                        var response = await client.PostAsync(uri, content);
-
-                        var responseValue = string.Empty;
-                        var stream = await response.Content.ReadAsStreamAsync();
-                        using (var reader = new System.IO.StreamReader(stream))
-                        {
-                            responseValue = reader.ReadToEnd();
-                            dynamic list = Newtonsoft.Json.JsonConvert.DeserializeObject(responseValue);
-
-                            foreach (dynamic item in list)
-                            {
-                                var userArticle = new UserArticles()
-                                {
-                                    articleid = Convert.ToInt32(item.id.ToString()),
-                                    url = item.url.ToString(),
-                                    title = item.title.ToString(),
-                                    isviewed = false,
-                                    time = Convert.ToInt32(item.time.ToString()),
-                                    tags = ((JArray)item.tags).Select(x => x.Value<string>()).ToList()
-                                };
-                                articlesList.Add(userArticle);
-                                redisdb.SetValue(userArticle.articleid.ToString(), Newtonsoft.Json.JsonConvert.SerializeObject(userArticle));
-                            }
-                        }
-                    }
+                    articlesToDb.Add(id);
                 }
             }
-            if (!string.IsNullOrEmpty(title) && title != "undefined")
+
+            if (!string.IsNullOrEmpty(title))
             {
                 articlesList.RemoveAll(x => !x.title.Contains(title, StringComparison.OrdinalIgnoreCase));
             }
-            if (!string.IsNullOrEmpty(tags) && tags != "undefined")
+            if (!string.IsNullOrEmpty(tags))
             {
                 var tempList = new List<UserArticles>();
                 foreach (var item in articlesList)
                 {
-                    if (item.tags.Contains(tags,StringComparison.OrdinalIgnoreCase))
+                    if (item.tags.Contains(tags, StringComparison.OrdinalIgnoreCase))
                     {
                         tempList.Add(item);
                     }
 
                 }
-                
+
                 articlesList.Clear();
                 articlesList.AddRange(tempList);
             }
-            return articlesList.OrderByDescending(x => x.time);
+            if (pageIndex > -1 && (!string.IsNullOrEmpty(title) || !string.IsNullOrEmpty(tags)))
+            {
+                count = articlesList.Count;
+                articlesList = articlesList.Skip(pageIndex).Take(pageSize).OrderByDescending(x => x.Id).ToList();
+            }
+            return new Tuple<IEnumerable<UserArticles>, int>(articlesList.OrderByDescending(x => x.time), count);
         }
 
-       
-        public void DeleteUserArticle(string username,int id)
+
+        public void DeleteUserArticle(string username, int id)
         {
             var article = db.UserArticles.FirstOrDefault(x => x.username == username && x.articleid == id);
             article.isviewed = true;

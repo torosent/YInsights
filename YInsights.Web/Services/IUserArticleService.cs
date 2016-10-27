@@ -8,7 +8,7 @@ namespace YInsights.Web.Services
 {
     public interface IUserArticleService
     {
-        Task<IEnumerable<UserArticles>> GetUserUnviewedArticles(string username, string title,string tags);
+        Task<Tuple<IEnumerable<UserArticles>, int>> GetUserUnviewedArticles(string username, string title,string tags, int pageIndex, int pageSize);
         void DeleteUserArticle(string username, int id);
     }
 }

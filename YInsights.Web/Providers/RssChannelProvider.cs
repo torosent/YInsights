@@ -78,8 +78,8 @@ namespace YInsights.Web.Providers
             //DateTime mostRecentPubDate = DateTime.MinValue;
             var items = new List<RssItem>();
 
-            var userArticles = await userArticleService.GetUserUnviewedArticles(username);
-            var articles = userArticles.Take(maxFeedItems);
+            var tuple = await userArticleService.GetUserUnviewedArticles(username);
+            var articles = tuple.Item1.Take(maxFeedItems);
             foreach (var item in articles)
             {
                 var rssItem = new RssItem();

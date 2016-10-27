@@ -32,7 +32,6 @@
   <ItemGroup>
     <ProjectReference Include="..\CalaisTopicAndTags\CalaisTopicAndTags.csproj" />
     <ProjectReference Include="..\CalculateTopicsAndTags\CalculateTopicsAndTags.csproj" />
-    <ProjectReference Include="..\DocumentDbMiddlewareWebApi\DocumentDbMiddlewareWebApi.csproj" />
     <ProjectReference Include="..\GetArticles\GetArticles.csproj" />
     <ProjectReference Include="..\GetArticle\GetArticle.csproj" />
     <ProjectReference Include="..\LastTopics\LastTopics.csproj" />
