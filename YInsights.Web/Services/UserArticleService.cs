@@ -36,7 +36,10 @@ namespace YInsights.Web.Services
             {
                 query = query.Skip(pageIndex).Take(pageSize).OrderByDescending(x => x.articleid); ;
             }
-
+            if (pageIndex == -1 && pageSize>-1)
+            {
+                query = query.Take(pageSize).OrderByDescending(x => x.articleid); ;
+            }
             foreach (var id in query)
             {
                 var val = await redisdb.GetValue(id.articleid.ToString());
