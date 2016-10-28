@@ -48,9 +48,9 @@ namespace YInsights.Web.Providers
             channel.Description = $"Feed for {username}";
             channel.Title = "YInsights perosonalized feed";
             channel.Language = new CultureInfo("en-US");
-            DateTime mostRecentPubDate = DateTime.MinValue;
-            channel.PublicationDate = mostRecentPubDate;
-            channel.TimeToLive = 30;
+       
+            channel.PublicationDate = DateTime.Now;
+            channel.TimeToLive = 5;
             var category = new RssCategory("articles");
             channel.Categories.Add(category);
             channel.Image = new RssImage(new Uri("https://yinsights.torosent.com"), "YInsights", new Uri("https://yinsights.torosent.com/images/Logomakr_5r1SVn.png"));
@@ -74,8 +74,6 @@ namespace YInsights.Web.Providers
             channel.SelfLink = new Uri(feedUrl);
             channel.Link = channel.SelfLink;
 
-
-            //DateTime mostRecentPubDate = DateTime.MinValue;
             var items = new List<RssItem>();
 
             var tuple = await userArticleService.GetUserUnviewedArticles(username);

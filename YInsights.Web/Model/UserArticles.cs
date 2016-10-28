@@ -19,7 +19,7 @@ namespace YInsights.Web.Model
         public DateTime? addeddate { get; set; }
 
         public bool isviewed { get; set; }
-
+        public bool ? star { get; set; }
         [NotMapped]
         public List<string> tags { get; set; }
         [NotMapped]

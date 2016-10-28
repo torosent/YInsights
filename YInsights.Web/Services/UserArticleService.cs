@@ -22,37 +22,35 @@ namespace YInsights.Web.Services
 
         }
 
-        public async Task<Tuple<IEnumerable<UserArticles>, int>> GetUserUnviewedArticles(string username, string title = null, string tags = null, int pageIndex = -1, int pageSize = -1)
+        public async Task<Tuple<IEnumerable<UserArticles>, int>> GetUserUnviewedArticles(string username, string title = null, string tags = null, int pageIndex = -1, int pageSize = -1,bool star = false)
         {
             var articlesList = new List<UserArticles>();
-            var query = db.UserArticles.Where(x => x.username == username && x.isviewed != true).OrderByDescending(x => x.Id);
+            var query = db.UserArticles.Where(x => x.username == username && x.isviewed != true).OrderByDescending(x => x.articleid);
+            if (star)
+            {
+                query = query.Where(x => x.star == true).OrderByDescending(x => x.articleid);
+            }
             var count = db.UserArticles.Count(x => x.username == username && x.isviewed != true);
+
             if (pageIndex > -1 && string.IsNullOrEmpty(title) && string.IsNullOrEmpty(tags))
             {
-                query = query.Skip(pageIndex).Take(pageSize).OrderByDescending(x => x.Id); ;
+                query = query.Skip(pageIndex).Take(pageSize).OrderByDescending(x => x.articleid); ;
             }
 
-            var articlesIds = query.Select(x => x.articleid.ToString());
-            var articlesToDb = new List<string>();
-
-            foreach (var id in articlesIds)
+            foreach (var id in query)
             {
-
-                var val = await redisdb.GetValue(id);
+                var val = await redisdb.GetValue(id.articleid.ToString());
                 if (!string.IsNullOrEmpty(val))
                 {
                     var article = Newtonsoft.Json.JsonConvert.DeserializeObject<UserArticles>(val);
+                    article.star = id.star;
                     if (article.articleid == 0)
                     {
                         article.articleid = article.id;
                         redisdb.SetValue(article.articleid.ToString(), Newtonsoft.Json.JsonConvert.SerializeObject(article));
                     }
                     articlesList.Add(article);
-                }
-                else
-                {
-                    articlesToDb.Add(id);
-                }
+                }   
             }
 
             if (!string.IsNullOrEmpty(title))
@@ -77,7 +75,7 @@ namespace YInsights.Web.Services
             if (pageIndex > -1 && (!string.IsNullOrEmpty(title) || !string.IsNullOrEmpty(tags)))
             {
                 count = articlesList.Count;
-                articlesList = articlesList.Skip(pageIndex).Take(pageSize).OrderByDescending(x => x.Id).ToList();
+                articlesList = articlesList.Skip(pageIndex).Take(pageSize).OrderByDescending(x => x.articleid).ToList();
             }
             return new Tuple<IEnumerable<UserArticles>, int>(articlesList.OrderByDescending(x => x.time), count);
         }
@@ -87,6 +85,12 @@ namespace YInsights.Web.Services
         {
             var article = db.UserArticles.FirstOrDefault(x => x.username == username && x.articleid == id);
             article.isviewed = true;
+            db.SaveChanges();
+        }
+        public void StarUserArticle(string username, int id,bool star)
+        {
+            var article = db.UserArticles.FirstOrDefault(x => x.username == username && x.articleid == id);
+            article.star = star;
             db.SaveChanges();
         }
     }

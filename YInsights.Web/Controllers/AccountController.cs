@@ -140,7 +140,17 @@ namespace YInsights.Web.Controllers
 
 
         }
+        [Authorize]
+        [HttpPut]
+        public void StarArticle(int id,bool star)
+        {
+            string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
+            aiService.TrackUser("StarArticle", username, id.ToString(),star.ToString());
 
+            userArticleService.StarUserArticle(username, id,star);
+
+
+        }
         [Authorize]
         public async Task<IActionResult> SearchTopics(string text)
         {
@@ -150,14 +160,14 @@ namespace YInsights.Web.Controllers
         }
 
         [Authorize]
-        public async Task<IActionResult> GenerateMyList(string title,string tags, int pageIndex = 0, int pageSize = 15)
+        public async Task<IActionResult> GenerateMyList(string title,string tags, int pageIndex = 0, int pageSize = 15,bool star=false)
         {
             try
             {
                 string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
                 aiService.TrackUser("GenerateMyList", username);
 
-                var tuple = await userArticleService.GetUserUnviewedArticles(username, title,tags,pageIndex,pageSize);
+                var tuple = await userArticleService.GetUserUnviewedArticles(username, title,tags,pageIndex,pageSize,star);
                
                 return Json(new { data = tuple.Item1, itemsCount = tuple.Item2});
             }

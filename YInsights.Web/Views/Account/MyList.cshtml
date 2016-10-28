@@ -58,7 +58,7 @@
                     var d = $.Deferred();
                    
                     $.ajax({
-                        url: "/Account/GenerateMyList?title=" + filter.title + "&tags=" + filter.tags + "&pageIndex=" + startIndex + "&pageSize=" + filter.pageSize,
+                        url: "/Account/GenerateMyList?title=" + filter.title + "&tags=" + filter.tags + "&pageIndex=" + startIndex + "&pageSize=" + filter.pageSize + "&star=" + filter.star,
                         dataType: "json"
                     }).done(function (response) {
                         d.resolve(response);
@@ -88,11 +88,31 @@
 
                      },
                      itemTemplate: function (_, item) {
-                         return createbuttons(item);
+                         return createsharebuttons(item);
                      },
                      align: "center",
                      width: 40
                  },
+                   {
+                       name: "star",
+                       filterTemplate: function () {      
+                           return $("<input>").attr("id", "starfilter").attr("type","checkbox").bind("click", function () {
+                                   $("#jsGrid").jsGrid("search");                              
+                           });
+                       },
+                       filterValue: function () {
+                           return $("#starfilter").is(':checked');
+                       },
+                       headerTemplate: function () {
+                           return $("<div>").html("Star");
+
+                       },
+                       itemTemplate: function (_, item) {
+                           return createfavbuttons(item);
+                       },
+                       align: "center",
+                       width: 15
+                   },
                  
                 {
                     itemTemplate: function (_, item) {
@@ -149,13 +169,48 @@
                 }},
                 {
                     type: "control", modeSwitchButton: false,
-                    editButton: false, width: 40
+                    editButton: false, width: 20
                 }
             ]
         });
-       
+        function starArticle(item) {
+            $.ajax({
+                url: '/Account/StarArticle?id=' + item.articleid+"&star="+item.star,
+                type: 'PUT',
+                success: function (result) {
+                    
+                }
+            });
+        }
+        function createfavbuttons(item)
+        {
+           
+            var activeClass = decideStarActiveClass(item);
+            var btn = $('<i class="fa ' + activeClass + '" aria-hidden="true"></i>');
+            btn.click(function () {
+                item.star = !item.star;
+                activeClass = decideStarActiveClass(item);
+                btn.removeClass().addClass("fa").addClass(activeClass)
+                starArticle(item);
+             });
+            return btn;
 
-        function createbuttons(item) {
+        }
+        function decideStarActiveClass(item)
+        {
+            var activeClass;
+            var starClass = "fa-star";
+            var staroClass = "fa-star-o";
+            if (item.star) {
+                activeClass = starClass;
+
+            }
+            else {
+                activeClass = staroClass;
+            }
+            return activeClass;
+        }
+        function createsharebuttons(item) {
             return $([                
     '<a target="_blank" href="https://facebook.com/sharer.php?u=' + item.url + '" class=" btn btn-primary btn-sm fa fa-facebook-official" aria-hidden="true" ></a>',
   
