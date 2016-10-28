@@ -14,20 +14,22 @@ namespace YInsights.Web.Services
             db = _db;
         }
 
-        public User FindUserByUsername(string username)
+        public User FindUserById(string username)
         {
             return db.User.FirstOrDefault(x => x.Id == username);
         }
 
-        public async void InsertUser(User user)
+        public void InsertUser(User user)
         {
             db.User.Add(user);
-            await db.SaveChangesAsync();
+            db.SaveChanges();
         }
-        public async void UpdateUser(User user)
+        public void UpdateUser(User user)
         {
             db.User.Update(user);
-            await db.SaveChangesAsync();
+            db.SaveChanges();
         }
+
+
     }
 }

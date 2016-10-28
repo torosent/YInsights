@@ -31,6 +31,7 @@ namespace YInsights.Web.Controllers
         }
         public IActionResult Login(string returnUrl = "/")
         {
+            
           
             return new ChallengeResult("Auth0", new AuthenticationProperties() { RedirectUri = returnUrl });
 
@@ -39,7 +40,7 @@ namespace YInsights.Web.Controllers
         [Authorize]
         public IActionResult Logout()
         {
-            string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
+            string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
             aiService.TrackUser("Logout", username);
             HttpContext.Authentication.SignOutAsync("Auth0");
             HttpContext.Authentication.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -48,6 +49,7 @@ namespace YInsights.Web.Controllers
         }
 
      
+
         
 
         [Authorize]
@@ -60,15 +62,17 @@ namespace YInsights.Web.Controllers
             ViewBag.TrendingTopics = await topicService.GetTrendingTopics();
 
 
+            string id = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
             string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
-            aiService.TrackUser("ViewProfile", username);
 
-            var user = userService.FindUserByUsername(username);
+            aiService.TrackUser("ViewProfile", id);
+
+            var user = userService.FindUserById(id);
             if (user == null)
             {
                 user = new User();
-                user.Id = username;
-
+                user.Id = id;
+                user.username = username;
                 return View(user);
             }
             else
@@ -93,23 +97,25 @@ namespace YInsights.Web.Controllers
             ViewBag.LastTopics = await topicService.GetLastTopics();
             ViewBag.TrendingTopics = await topicService.GetTrendingTopics();
 
-            string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
-
-            aiService.TrackUser("ChangeProfile", username);
-            var user = userService.FindUserByUsername(username);
+            string id = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
+            string username  = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
+            aiService.TrackUser("ChangeProfile", id);
+            var user = userService.FindUserById(id);
             if (inputuser.tags != null)
             {
                 inputuser.topics = Newtonsoft.Json.JsonConvert.SerializeObject(inputuser.tags);
             }
             if (user == null)
             {
-                inputuser.Id = username;
+                inputuser.Id = id;
+                inputuser.username = username;
                 userService.InsertUser(inputuser);
                 ViewBag.success = "true";
                 return View(inputuser);
             }
             else
             {
+                user.username = username;
                 user.hn = inputuser.hn;
                 user.topics = inputuser.topics;
                 user.tags = inputuser.tags;
@@ -133,7 +139,7 @@ namespace YInsights.Web.Controllers
         [HttpDelete]
         public void DeleteArticle(int id)
         {
-            string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
+            string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
             aiService.TrackUser("DeleteArticle", username,id.ToString());
 
             userArticleService.DeleteUserArticle(username, id);
@@ -144,7 +150,7 @@ namespace YInsights.Web.Controllers
         [HttpPut]
         public void StarArticle(int id,bool star)
         {
-            string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
+            string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
             aiService.TrackUser("StarArticle", username, id.ToString(),star.ToString());
 
             userArticleService.StarUserArticle(username, id,star);
@@ -164,7 +170,7 @@ namespace YInsights.Web.Controllers
         {
             try
             {
-                string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
+                string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
                 aiService.TrackUser("GenerateMyList", username);
 
                 var tuple = await userArticleService.GetUserUnviewedArticles(username, title,tags,pageIndex,pageSize,star);

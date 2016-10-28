@@ -30,8 +30,8 @@ namespace YInsights.Web.Controllers
         {
             try
             {
-                string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
-                var user = userService.FindUserByUsername(username);
+                string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
+                var user = userService.FindUserById(username);
                 aiService.TrackUser("Homepage", username);
                 if (user == null || string.IsNullOrEmpty(user.topics))
                 {
@@ -58,7 +58,7 @@ namespace YInsights.Web.Controllers
         [Authorize]
         public IActionResult RSS()
         {
-            string username = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
+            string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
             var link = string.Concat("https://", HttpContext.Request.Host.ToUriComponent(), "/api/feed?id=", username);
             ViewBag.link = link;
             return View();

@@ -18,5 +18,7 @@ namespace YInsights.Web.Model
         public DateTime? lastlogin { get; set; }
         [NotMapped]
         public List<string> tags { get; set; }
+        public string username { get; set; }
+
     }
 }
