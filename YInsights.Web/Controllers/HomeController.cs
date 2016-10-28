@@ -58,7 +58,7 @@ namespace YInsights.Web.Controllers
         [Authorize]
         public IActionResult RSS()
         {
-            string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
+            string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value.Split('|')[1];
             var link = string.Concat("https://", HttpContext.Request.Host.ToUriComponent(), "/api/feed?id=", username);
             ViewBag.link = link;
             return View();

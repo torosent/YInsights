@@ -25,7 +25,7 @@ namespace YInsights.Web.Services
         public async Task<Tuple<IEnumerable<UserArticles>, int>> GetUserUnviewedArticles(string username, string title = null, string tags = null, int pageIndex = -1, int pageSize = -1,bool star = false)
         {
             var articlesList = new List<UserArticles>();
-            var query = db.UserArticles.Where(x => x.username == username && x.isviewed != true).OrderByDescending(x => x.articleid);
+            var query = db.UserArticles.Where(x => x.username.Contains(username) && x.isviewed != true).OrderByDescending(x => x.articleid);
             if (star)
             {
                 query = query.Where(x => x.star == true).OrderByDescending(x => x.articleid);
