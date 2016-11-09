@@ -30,9 +30,10 @@ namespace YInsights.Web.Controllers
             foreach (var user in users)
             {
                 var count = db.UserArticles.Count(x => x.username == user.Id);
-                dynamicList.Add(new { user = user.Id, topics = user.topics, articles = count });
+                dynamicList.Add(new { user = user.username, topics = user.topics, articles = count, id = user.Id });
             }
-            return Json(dynamicList);
+            ViewBag.model = dynamicList;// Newtonsoft.Json.JsonConvert.SerializeObject(dynamicList);
+            return View();
         }
         [Authorize]
         public async Task<IActionResult> WordCloud()
