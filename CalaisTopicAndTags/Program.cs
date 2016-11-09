@@ -23,7 +23,7 @@ namespace CalaisTopicAndTags
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("CalaisTopicAndTagsType",
-                    context => new CalaisTopicAndTags(context, new RedisProvider(), new DocumentDBProvider())).GetAwaiter().GetResult();
+                    context => new CalaisTopicAndTags(context, new DocumentDBProvider())).GetAwaiter().GetResult();
 
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(CalaisTopicAndTags).Name);
 

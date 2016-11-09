@@ -30,7 +30,8 @@
     "Microsoft.EntityFrameworkCore.SqlServer": "1.0.1",
     "StackExchange.Redis": "1.1.608",
     "cloudscribe.Syndication": "1.0.6",
-    "Microsoft.Extensions.WebEncoders": "1.0.0"
+    "Microsoft.Extensions.WebEncoders": "1.0.0",
+    "Microsoft.Azure.Documents.Client.Core": "0.0.2-preview"
   },
 
   "tools": {

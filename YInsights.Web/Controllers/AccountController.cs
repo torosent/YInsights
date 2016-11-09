@@ -166,14 +166,14 @@ namespace YInsights.Web.Controllers
         }
 
         [Authorize]
-        public async Task<IActionResult> GenerateMyList(string title,string tags, int pageIndex = 0, int pageSize = 15,bool star=false)
+        public IActionResult GenerateMyList(string title,string tags, int pageIndex = 0, int pageSize = 15,bool star=false)
         {
             try
             {
                 string username = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
                 aiService.TrackUser("GenerateMyList", username);
 
-                var tuple = await userArticleService.GetUserUnviewedArticles(username, title,tags,pageIndex,pageSize,star);
+                var tuple =  userArticleService.GetUserUnviewedArticles(username, title,tags,pageIndex,pageSize,star);
                
                 return Json(new { data = tuple.Item1, itemsCount = tuple.Item2});
             }

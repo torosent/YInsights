@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Microsoft.Azure.Documents.Client;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,15 +15,15 @@ namespace YInsights.Web.Services
     public class UserArticleService : IUserArticleService
     {
         private readonly YInsightsContext db;
-        private readonly RedisProvider redisdb;
-        public UserArticleService(YInsightsContext _db, RedisProvider _redisdb)
+        private readonly DocumentDBProvider docClient;
+        public UserArticleService(YInsightsContext _db, RedisProvider _redisdb, DocumentDBProvider _docClient)
         {
             db = _db;
-            redisdb = _redisdb;
-
+            docClient = _docClient;
         }
 
-        public async Task<Tuple<IEnumerable<UserArticles>, int>> GetUserUnviewedArticles(string username, string title = null, string tags = null, int pageIndex = -1, int pageSize = -1,bool star = false)
+
+        public Tuple<IEnumerable<UserArticles>, int> GetUserUnviewedArticles(string username, string title = null, string tags = null, int pageIndex = -1, int pageSize = -1,bool star = false)
         {
             var articlesList = new List<UserArticles>();
             var query = db.UserArticles.Where(x => x.username.Contains(username) && x.isviewed != true).OrderByDescending(x => x.articleid);
@@ -40,21 +41,24 @@ namespace YInsights.Web.Services
             {
                 query = query.Take(pageSize).OrderByDescending(x => x.articleid); ;
             }
-            foreach (var id in query)
+
+            var articles = docClient.Client.CreateDocumentQuery<UserArticles>(
+            UriFactory.CreateDocumentCollectionUri("articles", "article")).AsQueryable();
+
+            var userArticles = query.ToList();
+
+            var ids = userArticles.Select(x => x.articleid.ToString()).ToList();
+
+            articles = articles.Where(x => ids.Contains(x.id.ToString()));
+            articlesList.AddRange(articles);
+            foreach (var userArticle in userArticles)
             {
-                var val = await redisdb.GetValue(id.articleid.ToString());
-                if (!string.IsNullOrEmpty(val))
-                {
-                    var article = Newtonsoft.Json.JsonConvert.DeserializeObject<UserArticles>(val);
-                    article.star = id.star;
-                    if (article.articleid == 0)
-                    {
-                        article.articleid = article.id;
-                        redisdb.SetValue(article.articleid.ToString(), Newtonsoft.Json.JsonConvert.SerializeObject(article));
-                    }
-                    articlesList.Add(article);
-                }   
+                var val = articlesList.FirstOrDefault(x => x.id == userArticle.articleid.ToString());
+                val.articleid = userArticle.articleid;
+                val.star = userArticle.star;
             }
+
+          
 
             if (!string.IsNullOrEmpty(title))
             {

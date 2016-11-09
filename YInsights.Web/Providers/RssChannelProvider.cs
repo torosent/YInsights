@@ -76,7 +76,7 @@ namespace YInsights.Web.Providers
 
             var items = new List<RssItem>();
 
-            var tuple = await userArticleService.GetUserUnviewedArticles(username,null,null,-1, maxFeedItems);
+            var tuple =  userArticleService.GetUserUnviewedArticles(username,null,null,-1, maxFeedItems);
             var articles = tuple.Item1.Take(maxFeedItems);
             foreach (var item in articles)
             {
