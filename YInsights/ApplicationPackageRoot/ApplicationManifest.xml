@@ -1,9 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="YInsightsType" ApplicationTypeVersion="1.0.22" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="YInsightsType" ApplicationTypeVersion="1.0.23" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="LastTopics_InstanceCount" DefaultValue="1" />
     <Parameter Name="TrendingTopics_InstanceCount" DefaultValue="1" />
-    <Parameter Name="DocumentDbMiddlewareWebApi_InstanceCount" DefaultValue="-1" />
     <Parameter Name="UserArticlesGenerator_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="UserArticlesGenerator_PartitionCount" DefaultValue="1" />
     <Parameter Name="UserArticlesGenerator_TargetReplicaSetSize" DefaultValue="3" />
@@ -26,11 +25,7 @@
     <ConfigOverrides />
   </ServiceManifestImport>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="DocumentDbMiddlewareWebApiPkg" ServiceManifestVersion="1.0.0" />
-    <ConfigOverrides />
-  </ServiceManifestImport>
-  <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="UserArticlesGeneratorPkg" ServiceManifestVersion="1.0.8" />
+    <ServiceManifestRef ServiceManifestName="UserArticlesGeneratorPkg" ServiceManifestVersion="1.0.9" />
     <ConfigOverrides />
   </ServiceManifestImport>
   <ServiceManifestImport>
@@ -62,11 +57,6 @@
     </Service>
     <Service Name="TrendingTopics">
       <StatelessService ServiceTypeName="TrendingTopicsType" InstanceCount="[TrendingTopics_InstanceCount]">
-        <SingletonPartition />
-      </StatelessService>
-    </Service>
-    <Service Name="DocumentDbMiddlewareWebApi">
-      <StatelessService ServiceTypeName="DocumentDbMiddlewareWebApiType" InstanceCount="[DocumentDbMiddlewareWebApi_InstanceCount]">
         <SingletonPartition />
       </StatelessService>
     </Service>

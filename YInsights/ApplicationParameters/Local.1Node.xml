@@ -3,7 +3,6 @@
   <Parameters>
     <Parameter Name="LastTopics_InstanceCount" Value="1" />
     <Parameter Name="TrendingTopics_InstanceCount" Value="1" />
-    <Parameter Name="DocumentDbMiddlewareWebApi_InstanceCount" Value="1" />
     <Parameter Name="UserArticlesGenerator_PartitionCount" Value="1" />
     <Parameter Name="UserArticlesGenerator_MinReplicaSetSize" Value="1" />
     <Parameter Name="UserArticlesGenerator_TargetReplicaSetSize" Value="1" />
