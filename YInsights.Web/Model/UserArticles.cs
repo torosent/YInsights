@@ -19,7 +19,7 @@ namespace YInsights.Web.Model
         public DateTime? addeddate { get; set; }
 
         public bool isviewed { get; set; }
-        public bool ? star { get; set; }
+        public bool? star { get; set; }
         [NotMapped]
         public List<string> tags { get; set; }
         [NotMapped]
@@ -30,6 +30,6 @@ namespace YInsights.Web.Model
         [NotMapped]
         public int time { get; set; }
         [NotMapped]
-        public int id { get; set; }
+        public string id { get; set; }
     }
 }
