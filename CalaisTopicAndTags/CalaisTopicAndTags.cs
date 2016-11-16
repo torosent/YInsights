@@ -27,13 +27,12 @@ namespace CalaisTopicAndTags
 
         string apitoken = CloudConfigurationManager.GetSetting("ApiToken");
         IDocumentDBProvider documentDB;
-        ICacheProvider cache;
-
-        public CalaisTopicAndTags(StatefulServiceContext context, ICacheProvider cache, IDocumentDBProvider documentDB)
+       
+        public CalaisTopicAndTags(StatefulServiceContext context, IDocumentDBProvider documentDB)
             : base(context)
         {
             this.documentDB = documentDB;
-            this.cache = cache;
+           
         }
 
         /// <summary>
@@ -133,8 +132,7 @@ namespace CalaisTopicAndTags
                                 {
                                     article.Value.processed = true;
                                     var upsertResult = await documentDB.Client.UpsertDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), article.Value);
-                                    cache.SetValue(article.Value.Id, Newtonsoft.Json.JsonConvert.SerializeObject(article.Value));
-
+                                   
                                     ServiceEventSource.Current.ServiceMessage(this, $"Updated article {article.Value.Id}");
                                     ApplicationInsightsClient.LogEvent($"Updated article", article.Value.Id);
 

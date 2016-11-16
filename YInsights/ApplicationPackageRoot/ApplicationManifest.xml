@@ -25,7 +25,11 @@
     <ConfigOverrides />
   </ServiceManifestImport>
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="UserArticlesGeneratorPkg" ServiceManifestVersion="1.0.9" />
+    <ServiceManifestRef ServiceManifestName="DocumentDbMiddlewareWebApiPkg" ServiceManifestVersion="1.0.0" />
+    <ConfigOverrides />
+  </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="UserArticlesGeneratorPkg" ServiceManifestVersion="1.0.8" />
     <ConfigOverrides />
   </ServiceManifestImport>
   <ServiceManifestImport>
