@@ -20,13 +20,12 @@ namespace LastTopics
     internal sealed class LastTopics : StatelessService
     {
 
-        ICacheProvider cache;
-        private DocumentDBProvider documentDBProvider;
+         private DocumentDBProvider documentDBProvider;
 
-        public LastTopics(StatelessServiceContext context, ICacheProvider cache, DocumentDBProvider documentDBProvider)
+        public LastTopics(StatelessServiceContext context,  DocumentDBProvider documentDBProvider)
             : base(context)
         {
-            this.cache = cache;
+        
             this.documentDBProvider = documentDBProvider;
         }
 
@@ -67,7 +66,7 @@ namespace LastTopics
             }
         }
 
-        private void CalculateLastTopics()
+        private async void CalculateLastTopics()
         {
 
             var articleExistQuery = documentDBProvider.Client.CreateDocumentQuery<Article>(
@@ -97,9 +96,11 @@ namespace LastTopics
             {
                 list.Add(new { topic = tag.Key, count = tag.Value });
             }
+            var topics = new { id = "LastTopics", value = Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)) };
 
-            cache.SetValue("LastTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
+            var upsertResult = await documentDBProvider.Client.UpsertDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), topics);
 
+           
             ServiceEventSource.Current.ServiceMessage(this, $"Commited Last {tags.Count} Topics");
             ApplicationInsightsClient.LogEvent($"Commited Last Topics", tags.Count.ToString());
 

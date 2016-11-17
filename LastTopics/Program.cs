@@ -24,7 +24,7 @@ namespace LastTopics
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("LastTopicsType",
-                    context => new LastTopics(context,new RedisProvider(),new DocumentDBProvider())).GetAwaiter().GetResult();
+                    context => new LastTopics(context,new DocumentDBProvider())).GetAwaiter().GetResult();
 
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(LastTopics).Name);
 

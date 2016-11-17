@@ -16,7 +16,7 @@ namespace YInsights.Web.Services
     {
         private readonly YInsightsContext db;
         private readonly DocumentDBProvider docClient;
-        public UserArticleService(YInsightsContext _db, RedisProvider _redisdb, DocumentDBProvider _docClient)
+        public UserArticleService(YInsightsContext _db, DocumentDBProvider _docClient)
         {
             db = _db;
             docClient = _docClient;

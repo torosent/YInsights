@@ -53,13 +53,13 @@ namespace YInsights.Web.Controllers
         
 
         [Authorize]
-        public async Task<IActionResult> Profile()
+        public  IActionResult Profile()
         {
             ViewBag.title = "Profile";
 
 
-            ViewBag.LastTopics = await topicService.GetLastTopics();
-            ViewBag.TrendingTopics = await topicService.GetTrendingTopics();
+            ViewBag.LastTopics =  topicService.GetLastTopics();
+            ViewBag.TrendingTopics =  topicService.GetTrendingTopics();
 
 
             string id = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
@@ -90,12 +90,12 @@ namespace YInsights.Web.Controllers
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Profile(User inputuser)
+        public IActionResult Profile(User inputuser)
         {
 
             ViewBag.title = "Profile";
-            ViewBag.LastTopics = await topicService.GetLastTopics();
-            ViewBag.TrendingTopics = await topicService.GetTrendingTopics();
+            ViewBag.LastTopics =  topicService.GetLastTopics();
+            ViewBag.TrendingTopics =  topicService.GetTrendingTopics();
 
             string id = User.Claims.FirstOrDefault(y => y.Type == "user_id").Value;
             string username  = User.Claims.FirstOrDefault(y => y.Type == "name").Value;
@@ -161,7 +161,7 @@ namespace YInsights.Web.Controllers
         public async Task<IActionResult> SearchTopics(string text)
         {
 
-            var topicsList =await topicService.SearchTopics(text, 20);
+            var topicsList = topicService.SearchTopics(text, 20);
             return Json(topicsList);
         }
 

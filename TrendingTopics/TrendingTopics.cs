@@ -22,14 +22,12 @@ namespace TrendingTopics
     internal sealed class TrendingTopics : StatelessService
     {
 
-        private ICacheProvider cache;
         private DocumentDBProvider documentDBProvider;
 
-        public TrendingTopics(StatelessServiceContext context, ICacheProvider cache, DocumentDBProvider documentDBProvider)
+        public TrendingTopics(StatelessServiceContext context, DocumentDBProvider documentDBProvider)
             : base(context)
         {
-            this.cache = cache;
-            this.documentDBProvider = documentDBProvider;
+             this.documentDBProvider = documentDBProvider;
         }
         /// <summary>
         /// Optional override to create listeners (e.g., TCP, HTTP) for this service replica to handle client or user requests.
@@ -67,7 +65,7 @@ namespace TrendingTopics
             }
         }
 
-        private void CalculateTrendingTopics()
+        private async void CalculateTrendingTopics()
         {
 
             var currentDate = DateTime.Now.AddDays(-2).DateTimeToUnixTimestamp();
@@ -92,8 +90,10 @@ namespace TrendingTopics
                 list.Add(new { topic = tag.Key, count = tag.Value });
             }
 
-            cache.SetValue("TrendingTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)));
+             var topics = new { id = "TrendingTopics", value = Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(5)) };
 
+            var upsertResult = await documentDBProvider.Client.UpsertDocumentAsync(UriFactory.CreateDocumentCollectionUri("articles", "article"), topics);
+          
             ServiceEventSource.Current.ServiceMessage(this, $"Commited Trending {tags.Count} Topics");
             ApplicationInsightsClient.LogEvent($"Commited Trending Topics", tags.Count.ToString());
 

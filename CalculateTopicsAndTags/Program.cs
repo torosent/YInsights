@@ -24,7 +24,7 @@ namespace CalculateTopicsAndTags
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("CalculateTopicsAndTagsType",
-                    context => new CalculateTopicsAndTags(context,new RedisProvider(),new DocumentDBProvider())).GetAwaiter().GetResult();
+                    context => new CalculateTopicsAndTags(context,new DocumentDBProvider())).GetAwaiter().GetResult();
 
                
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(CalculateTopicsAndTags).Name);

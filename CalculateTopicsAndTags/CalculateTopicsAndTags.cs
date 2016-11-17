@@ -12,6 +12,7 @@ using YInsights.Shared.AI;
 using YInsights.Shared.Common;
 using YInsights.Shared.Providers;
 using Microsoft.Azure.Documents.Client;
+using YInsights.Shared.Extentions;
 
 namespace CalculateTopicsAndTags
 {
@@ -21,12 +22,11 @@ namespace CalculateTopicsAndTags
     internal sealed class CalculateTopicsAndTags : StatelessService
     {
 
-        ICacheProvider cache;
         IDocumentDBProvider documentDB;
-        public CalculateTopicsAndTags(StatelessServiceContext context, ICacheProvider cache, IDocumentDBProvider documentDB)
+        public CalculateTopicsAndTags(StatelessServiceContext context, IDocumentDBProvider documentDB)
             : base(context)
         {
-            this.cache = cache;
+          
             this.documentDB = documentDB;
         }
 
@@ -65,12 +65,10 @@ namespace CalculateTopicsAndTags
             }
         }
 
-        private void CalculateTopics()
+        private async void CalculateTopics()
         {
-
-
-            var articleExistQuery = documentDB.Client.CreateDocumentQuery<Article>(
-                UriFactory.CreateDocumentCollectionUri("articles", "article")).Where(f => f.processed == true);
+            var uri = UriFactory.CreateDocumentCollectionUri("articles", "article");
+            var articleExistQuery = documentDB.Client.CreateDocumentQuery<Article>(uri).Where(f => f.processed == true);
 
 
             var tags = new Dictionary<string, int>();
@@ -87,9 +85,12 @@ namespace CalculateTopicsAndTags
             {
                 list.Add(new { topic = tag.Key, count = tag.Value });
             }
+         
+            var topics = new { id = "Topics", value = Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)) };
+            var cloud = new { id = "WordCloudTopics", value = Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)) };
 
-            cache.SetValue("Topics", Newtonsoft.Json.JsonConvert.SerializeObject(list));
-            cache.SetValue("WordCloudTopics", Newtonsoft.Json.JsonConvert.SerializeObject(list.Take(1000)));
+            var upsertResult = await documentDB.Client.UpsertDocumentAsync(uri, topics);
+             upsertResult = await documentDB.Client.UpsertDocumentAsync(uri, cloud);
 
             ServiceEventSource.Current.ServiceMessage(this, $"Commited {tags.Count} Topics");
             ApplicationInsightsClient.LogEvent($"Commited Topics", tags.Count.ToString());

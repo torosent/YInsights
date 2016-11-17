@@ -44,8 +44,8 @@ namespace YInsights.Web.Controllers
                 }
 
                 ViewBag.title = "Home";
-                ViewBag.LastTopics = await topicService.GetLastTopics();
-                ViewBag.TrendingTopics = await topicService.GetTrendingTopics();
+                ViewBag.LastTopics =  topicService.GetLastTopics();
+                ViewBag.TrendingTopics =  topicService.GetTrendingTopics();
 
             }
             catch (Exception ex)

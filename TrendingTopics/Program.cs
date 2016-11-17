@@ -24,7 +24,7 @@ namespace TrendingTopics
                 // an instance of the class is created in this host process.
 
                 ServiceRuntime.RegisterServiceAsync("TrendingTopicsType",
-                    context => new TrendingTopics(context, new RedisProvider(),new DocumentDBProvider())).GetAwaiter().GetResult();
+                    context => new TrendingTopics(context,new DocumentDBProvider())).GetAwaiter().GetResult();
 
                 ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(TrendingTopics).Name);
 

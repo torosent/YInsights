@@ -5,31 +5,44 @@ using System.Threading.Tasks;
 using YInsights.Web.Model;
 using YInsights.Web.Providers;
 using YInsights.Web.Extentions;
+using Microsoft.Azure.Documents.Client;
+
 namespace YInsights.Web.Services
 {
     public class TopicService
     {
         private readonly YInsightsContext db;    
-        private readonly RedisProvider redisdb;
+        private readonly DocumentDBProvider docdb;
 
-        public TopicService(YInsightsContext _db, RedisProvider _redisdb)
+        public TopicService(YInsightsContext _db, DocumentDBProvider _docdb)
         {
             db = _db;
-            redisdb = _redisdb;
+            docdb = _docdb;
         }
-        public async Task<IEnumerable<Topics>> GetTopics(int limit)
+        public  IEnumerable<Topics> GetTopics(int limit)
         {
-            var strTopics = await redisdb.GetValue("WordCloudTopics");
+            var sql = "SELECT * FROM c where c.id = " + '"' + "WordCloudTopics" + '"';
+            var articleExistQuery = docdb.Client.CreateDocumentQuery(
+              UriFactory.CreateDocumentCollectionUri("articles", "article"), sql).AsEnumerable();
+
+
+            var strTopics = articleExistQuery.FirstOrDefault().value.ToString();
             if (!string.IsNullOrEmpty(strTopics))
             {
-                var topics = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics).Take(limit);
-                return topics;
+                var topics = (List<Topics>)Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics);
+                return topics.Take(limit);
             }
             return new List<Topics>();
         }
-        public async Task<IEnumerable<Topics>> GetLastTopics()
+        public IEnumerable<Topics> GetLastTopics()
         {
-            var strTopics = await redisdb.GetValue("LastTopics");
+            var sql = "SELECT * FROM c where c.id = " + '"' + "LastTopics" + '"';
+            var articleExistQuery = docdb.Client.CreateDocumentQuery(
+              UriFactory.CreateDocumentCollectionUri("articles", "article"), sql).AsEnumerable();
+
+
+            var strTopics = articleExistQuery.FirstOrDefault().value.ToString();
+          
             if (!string.IsNullOrEmpty(strTopics))
             {
                 var topics = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics);
@@ -37,9 +50,15 @@ namespace YInsights.Web.Services
             }
             return new List<Topics>();
         }
-        public async Task<IEnumerable<Topics>> GetTrendingTopics()
+        public IEnumerable<Topics> GetTrendingTopics()
         {
-            var strTopics = await redisdb.GetValue("TrendingTopics");
+            var sql = "SELECT * FROM c where c.id = " + '"' + "TrendingTopics" + '"';
+            var articleExistQuery = docdb.Client.CreateDocumentQuery(
+              UriFactory.CreateDocumentCollectionUri("articles", "article"), sql).AsEnumerable();
+
+
+            var strTopics = articleExistQuery.FirstOrDefault().value.ToString();
+         
             if (!string.IsNullOrEmpty(strTopics))
             {
                 var topics = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics);
@@ -47,9 +66,14 @@ namespace YInsights.Web.Services
             }
             return new List<Topics>();
         }
-        public async Task<IEnumerable<string>> SearchTopics(string text, int limit)
+        public IEnumerable<string> SearchTopics(string text, int limit)
         {
-            var strTopics = await redisdb.GetValue("Topics");
+            var sql = "SELECT * FROM c where c.id = " + '"' + "Topics" + '"';
+            var articleExistQuery = docdb.Client.CreateDocumentQuery(
+              UriFactory.CreateDocumentCollectionUri("articles", "article"), sql).AsEnumerable();
+
+
+            string strTopics = articleExistQuery.FirstOrDefault().value.ToString();
             if (!string.IsNullOrEmpty(strTopics))
             {
                 var topics = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Topics>>(strTopics);

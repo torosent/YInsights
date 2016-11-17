@@ -36,11 +36,11 @@ namespace YInsights.Web.Controllers
             return View();
         }
         [Authorize]
-        public async Task<IActionResult> WordCloud()
+        public IActionResult WordCloud()
         {
             try
             {
-                var topicsList = await topicService.GetTopics(200);
+                var topicsList =  topicService.GetTopics(200);
                 return Json(topicsList);
             }
             catch (Exception ex)
