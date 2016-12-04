@@ -46,24 +46,18 @@ namespace YInsights.Web.Services
             UriFactory.CreateDocumentCollectionUri("articles", "article")).AsQueryable();
 
             var userArticles = query.ToList();
-
             var ids = userArticles.Select(x => x.articleid.ToString()).ToList();
 
             articles = articles.Where(x => ids.Contains(x.id.ToString()));
-            articlesList.AddRange(articles);
-            foreach (var userArticle in userArticles)
-            {
-                var val = articlesList.FirstOrDefault(x => x.id == userArticle.articleid.ToString());
-                val.articleid = userArticle.articleid;
-                val.star = userArticle.star;
-            }
 
-
-
+           
             if (!string.IsNullOrEmpty(title))
             {
-                articlesList.RemoveAll(x => !x.title.Contains(title, StringComparison.OrdinalIgnoreCase));
+                articles = articles.Where(x => x.title.ToUpper().Contains(title.ToUpper()));
             }
+            articlesList.AddRange(articles);
+
+           
             if (!string.IsNullOrEmpty(tags))
             {
                 var tempList = new List<UserArticles>();
@@ -79,6 +73,17 @@ namespace YInsights.Web.Services
                 articlesList.Clear();
                 articlesList.AddRange(tempList);
             }
+
+            foreach (var userArticle in userArticles)
+            {
+                var val = articlesList.FirstOrDefault(x => x.id == userArticle.articleid.ToString());
+                if (val != null)
+                {
+                    val.articleid = userArticle.articleid;
+                    val.star = userArticle.star;
+                }
+            }
+
             if (pageIndex > -1 && (!string.IsNullOrEmpty(title) || !string.IsNullOrEmpty(tags)))
             {
                 count = articlesList.Count;
