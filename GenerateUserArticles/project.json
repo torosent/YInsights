@@ -19,7 +19,8 @@
     "Microsoft.Extensions.Options.ConfigurationExtensions": "1.1.0",
     "SharedCode": "1.0.0-*",
     "System.Data.SqlClient": "4.3.0",
-    "WindowsAzure.Storage": "7.2.1"
+    "WindowsAzure.Storage": "7.2.1",
+    "Microsoft.ApplicationInsights.AspNetCore": "1.0.0"
   },
 
   "tools": {

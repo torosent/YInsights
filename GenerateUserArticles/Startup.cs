@@ -22,6 +22,15 @@ namespace GenerateUserArticles
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
+            if (env.IsDevelopment())
+            {
+                builder.AddApplicationInsightsSettings(developerMode: true);
+            }
+            else
+            {
+                builder.AddApplicationInsightsSettings();
+
+            }
             Configuration = builder.Build();
         }
 
@@ -38,7 +47,7 @@ namespace GenerateUserArticles
             services.AddMvc();
             services.AddSingleton(typeof(DocumentDBProvider), docProvider);
             services.AddSingleton(typeof(SqlProvider), sqlProvider);
-
+            services.AddApplicationInsightsTelemetry(Configuration);
             var storageAccount = CloudStorageAccount.Parse(Configuration.GetConnectionString("StorageConnectionString"));
             // Create the table client.
             var tableClient = storageAccount.CreateCloudTableClient();
@@ -56,6 +65,8 @@ namespace GenerateUserArticles
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            app.UseApplicationInsightsRequestTelemetry();
+            app.UseApplicationInsightsExceptionTelemetry();
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
 

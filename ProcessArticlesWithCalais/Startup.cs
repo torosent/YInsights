@@ -20,6 +20,15 @@ namespace ProcessArticlesWithCalais
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
+            if (env.IsDevelopment())
+            {
+                builder.AddApplicationInsightsSettings(developerMode: true);
+            }
+            else
+            {
+                builder.AddApplicationInsightsSettings();
+
+            }
             Configuration = builder.Build();
         }
 
@@ -32,11 +41,14 @@ namespace ProcessArticlesWithCalais
             services.AddMvc();
             services.AddSingleton(typeof(DocumentDBProvider), new DocumentDBProvider(Configuration.GetConnectionString("DocumentDBUri"), Configuration.GetConnectionString("DocumentDBKey")));
             services.AddSingleton(typeof(string), Configuration.GetConnectionString("ApiToken"));
+            services.AddApplicationInsightsTelemetry(Configuration);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            app.UseApplicationInsightsRequestTelemetry();
+            app.UseApplicationInsightsExceptionTelemetry();
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
 

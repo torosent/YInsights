@@ -98,7 +98,7 @@ namespace YInsights
                 AutomaticAuthenticate = true,
                 AutomaticChallenge = true
             });
-            app.UseApplicationInsightsRequestTelemetry();
+          
             // Add the OIDC middleware
             app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions("Auth0")
             {
@@ -132,7 +132,7 @@ namespace YInsights
                     template: "{controller=Home}/{action=Index}/{id?}");
             });
 
-          
+            app.UseApplicationInsightsRequestTelemetry();
             app.UseApplicationInsightsExceptionTelemetry();
             //app.Use(async (context, next) =>
             //{
