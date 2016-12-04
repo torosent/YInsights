@@ -19,8 +19,6 @@ namespace GetGeneralTopics.Controllers
     {
         private const string URL = "https://api.thomsonreuters.com/permid/calais";
 
-        private string apitoken;
-
         DocumentDBProvider documentDBProvider;
 
         public CalculateController(DocumentDBProvider _documentDBProvider)

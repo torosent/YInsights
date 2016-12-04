@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  hnarticles:
+    image: user/hnarticles${TAG}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80"
