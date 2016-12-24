@@ -1,0 +1,91 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+<br />
+<div class="row">
+    <div class="col-lg-12">
+
+        @{
+            if (string.IsNullOrEmpty(ViewBag.user))
+            {
+                <div class="alert alert-dismissible alert-info">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <h4>Warning!</h4>
+                    <p>Your profile is not complete. You need to add topics. <a href="@Url.Action("Profile","Account")" class="alert-link">Click here to add them.</a></p>
+                </div>
+
+            }
+        }
+        <h3>Top Topics</h3>
+
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-1"></div>
+    <div class="col-lg-7" id="canvas-container">
+        <canvas id="canvas" class="canvas"></canvas>
+    </div>
+    <div class="col-lg-3">
+        @Html.Partial("/Views/Shared/TopicsWidget.cshtml")
+    </div>
+    <div class="col-lg-1"></div>
+</div>
+@section Scripts {
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+
+            $.ajax({
+                url: "/Report/WordCloud",
+                success: success
+            });
+
+            function success(topiclist) {
+                var wordList = [];
+                $.each(topiclist, function (index, value) {
+
+                    var arr = [];
+                    arr[0] = value.topic;
+                    arr[1] = 5;
+                    wordList.push(arr);;
+                });
+
+                var devicePixelRatio = 1.5;
+                var $canvas = $('#canvas');
+                // Set the width and height
+                var width = $('#canvas-container').width();
+                var height = Math.floor(width * 0.65);
+                var pixelWidth = width;
+                var pixelHeight = height;
+
+                if (devicePixelRatio !== 1) {
+                    $canvas.css({ 'width': width + 'px', 'height': height + 'px' });
+
+                    pixelWidth *= devicePixelRatio;
+                    pixelHeight *= devicePixelRatio;
+                } else {
+                    $canvas.css({ 'width': '', 'height': '' });
+                }
+
+                $canvas.attr('width', pixelWidth);
+                $canvas.attr('height', pixelHeight);
+
+                WordCloud($canvas[0], {
+                    list: wordList,
+                    weightFactor: 5,
+                    fontFamily: 'Finger Paint, cursive, sans-serif',
+                    color: '#2c3e50',
+                    gridSize: Math.round(16 * $canvas.width() / 1024),
+                    hover: window.drawBox,
+                    click: function (item) {
+                    },
+                    backgroundColor: '#ecf0f1'
+                });
+
+            }
+
+        });
+    </script>
+}
+
+

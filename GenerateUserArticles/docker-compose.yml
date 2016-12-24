@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  generateuserarticles:
+    image: user/generateuserarticles${TAG}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80"

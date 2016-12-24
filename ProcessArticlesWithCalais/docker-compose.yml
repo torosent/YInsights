@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  processarticleswithcalais:
+    image: user/processarticleswithcalais${TAG}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80"

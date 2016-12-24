@@ -1,0 +1,44 @@
+﻿<div class="panel panel-info">
+    <div class="panel-heading">
+        <h3 class="panel-title">Last Topics Added</h3>
+    </div>
+    <div class="panel-body">
+        <ul class="list-group">
+            @{
+                if (ViewBag.LastTopics != null)
+                {
+                    foreach (var item in (List<YInsights.Web.Model.Topics>)ViewBag.LastTopics)
+                    {
+                        <li class="list-group-item">
+                            @item.topic.ToString()
+                        </li>
+                    }
+
+                }
+            }
+
+        </ul>
+    </div>
+</div>
+<div class="panel panel-info">
+    <div class="panel-heading">
+        <h3 class="panel-title">Trending Topics</h3>
+    </div>
+    <div class="panel-body">
+        <ul class="list-group">
+            @{
+                if (ViewBag.LastTopics != null)
+                {
+                    foreach (var item in (List<YInsights.Web.Model.Topics>)ViewBag.TrendingTopics)
+                    {
+                        <li class="list-group-item">
+                            <span class="badge">@item.count</span>
+                            @item.topic.ToString()
+                        </li>
+                    }
+
+                }
+            }
+        </ul>
+    </div>
+</div>

@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  getgeneraltopics:
+    image: user/getgeneraltopics${TAG}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80"

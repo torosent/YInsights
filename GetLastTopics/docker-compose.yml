@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  getlasttopics:
+    image: user/getlasttopics${TAG}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80"

@@ -1,0 +1,80 @@
+{
+  "dependencies": {
+    "Microsoft.NETCore.App": {
+      "version": "1.1.0",
+      "type": "platform"
+    },
+    "Microsoft.ApplicationInsights.AspNetCore": "1.0.2",
+    "StackExchange.Redis": "1.1.608",
+    "Microsoft.Azure.DocumentDB.Core": "0.1.0-preview",
+    "BundlerMinifier.Core": "2.2.306",
+    "cloudscribe.Syndication": "1.1.0",
+    "Microsoft.AspNetCore.Authentication.Cookies": "1.1.0",
+    "Microsoft.AspNetCore.Authentication.OpenIdConnect": "1.1.0",
+    "Microsoft.AspNetCore.Diagnostics": "1.1.0",
+    "Microsoft.AspNetCore.Mvc": "1.1.0",
+    "Microsoft.AspNetCore.Razor.Tools": "1.1.0-preview4-final",
+    "Microsoft.AspNetCore.Server.Kestrel": "1.1.0",
+    "Microsoft.AspNetCore.Server.Kestrel.Https":"1.1.0",
+    "Microsoft.AspNetCore.StaticFiles": "1.1.0",
+    "Microsoft.EntityFrameworkCore.SqlServer": "1.1.0",
+    "Microsoft.Extensions.Configuration.Abstractions": "1.1.0",
+    "Microsoft.Extensions.Configuration.EnvironmentVariables": "1.1.0",
+    "Microsoft.Extensions.Configuration.Json": "1.1.0",
+    "Microsoft.Extensions.Logging": "1.1.0",
+    "Microsoft.Extensions.Logging.Console": "1.1.0",
+    "Microsoft.Extensions.Logging.Debug": "1.1.0",
+    "Microsoft.Extensions.Options.ConfigurationExtensions": "1.1.0",
+    "Microsoft.Extensions.WebEncoders": "1.1.0",
+    "dotnet-publish-docker": "1.0.0-preview1",
+    "Microsoft.VisualStudio.Web.BrowserLink.Loader": "14.1.0",
+    "System.Data.Common": "4.3.0",
+    "System.Data.SqlClient": "4.3.0",
+    "System.Runtime": "4.3.0"
+  },
+  "tools": {
+    "BundlerMinifier.Core": "2.2.281",
+    "dotnet-publish-docker": "1.0.0-preview1"
+  },
+  "frameworks": {
+    "netcoreapp1.1": {
+      "imports": [
+        "dotnet5.6",
+        "portable-net45+win8"
+      ]
+    }
+  },
+  "buildOptions": {
+    "emitEntryPoint": true,
+    "preserveCompilationContext": true,
+    "debugType": "portable"
+  },
+  "runtimeOptions": {
+    "configProperties": {
+      "System.GC.Server": true
+    }
+  },
+  "publishOptions": {
+    "include": [
+      "wwwroot",
+      "Views",
+      "web.pfx",
+      "Views/Home",
+      "Areas/**/Views",
+      "appsettings.json",
+      "web.config",
+      "docker-compose.yml",
+      "Dockerfile",
+      ".dockerignore"
+    ]
+  },
+  "scripts": {
+    "prepublish": [
+      "bower install",
+      "dotnet bundle"
+    ],
+    "postpublish": [
+      "dotnet publish-docker --publish-folder %publish:OutputPath%"
+    ]
+  }
+}
