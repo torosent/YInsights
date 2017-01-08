@@ -48,7 +48,10 @@ namespace YInsights.Web.Services
             var userArticles = query.ToList();
             var ids = userArticles.Select(x => x.articleid.ToString()).ToList();
 
-            //  articles = articles.Where(x => ids.Contains(x.id.ToString()));
+            if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(tags))
+            {
+                articles = articles.Where(x => ids.Contains(x.id.ToString()));
+            }
 
 
             if (!string.IsNullOrEmpty(title))
@@ -74,7 +77,7 @@ namespace YInsights.Web.Services
                 articlesList.Clear();
                 articlesList.AddRange(tempList.Where(x => ids.Contains(x.id.ToString())));
             }
-           
+
             foreach (var userArticle in userArticles)
             {
                 var val = articlesList.FirstOrDefault(x => x.id == userArticle.articleid.ToString());
