@@ -182,7 +182,7 @@ namespace YInsights.Web.Controllers
             {
                 aiService.TrackException(ex);
                
-                return Json(new List<UserArticles>());
+                return Json(new { data = new List<UserArticles>(), itemsCount = 0});
             }
         }
 

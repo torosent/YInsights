@@ -48,16 +48,17 @@ namespace YInsights.Web.Services
             var userArticles = query.ToList();
             var ids = userArticles.Select(x => x.articleid.ToString()).ToList();
 
-            articles = articles.Where(x => ids.Contains(x.id.ToString()));
+            //  articles = articles.Where(x => ids.Contains(x.id.ToString()));
 
-           
+
             if (!string.IsNullOrEmpty(title))
             {
-                articles = articles.Where(x => x.title.ToUpper().Contains(title.ToUpper()));
+                title = title.ToUpper();
+                articles = articles.Where(x => x.title.ToUpper().Contains(title));
             }
-            articlesList.AddRange(articles);
+            articlesList.AddRange(articles.ToList().Where(x => ids.Contains(x.id.ToString())));
 
-           
+
             if (!string.IsNullOrEmpty(tags))
             {
                 var tempList = new List<UserArticles>();
@@ -71,9 +72,9 @@ namespace YInsights.Web.Services
                 }
 
                 articlesList.Clear();
-                articlesList.AddRange(tempList);
+                articlesList.AddRange(tempList.Where(x => ids.Contains(x.id.ToString())));
             }
-
+           
             foreach (var userArticle in userArticles)
             {
                 var val = articlesList.FirstOrDefault(x => x.id == userArticle.articleid.ToString());
